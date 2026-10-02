@@ -37,7 +37,8 @@
     "cds/*/*/*.md",
     "cds/*.json",
     "cds/*/*.json",
-    "cds/*/*/*.json"
+    "cds/*/*/*.json",
+    "_*.mjs"
   ],
   "scripts": {
     "sync": "node _sync-corpus.mjs",

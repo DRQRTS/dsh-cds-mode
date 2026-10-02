@@ -401,7 +401,6 @@ dsh/                          ← GitHub 仓库根目录（也是 bundle 根目�
 | `_verify3.mjs` | 插件层校验：结构、接线、可移植性、真实装载 |
 | `_verify-corpus.mjs` | 语料层校验：委任书要素、组特质一致性、死链 |
 | `_sync-corpus.mjs` | 语料同步（`--check` 只比对不写入） |
-| `_check-index.mjs` | 检查 git 索引内是否全为 LF 且无 BOM |
 | `_check-specs.mjs` | 验证各种安装写法能否被官方解析器接受 |
 | `_compare-extract.mjs` | 比对"解压产物 vs 源"是否逐字节一致 |
 | `_patch-reader.mjs` | 零依赖的 patch 结构读取器 |
