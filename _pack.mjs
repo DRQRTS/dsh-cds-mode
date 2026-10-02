@@ -104,6 +104,7 @@ if (files.length === 0) {
 const MUST_HAVE = [
   'README.md',
   'INSTALL.md',
+  'LICENSE',
   'index.js',
   'cordis.patch.yml',
   'icon.svg',

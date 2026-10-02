@@ -27,6 +27,7 @@
   "files": [
     "README.md",
     "INSTALL.md",
+    "LICENSE",
     "package.json",
     "index.js",
     "cordis.patch.yml",
