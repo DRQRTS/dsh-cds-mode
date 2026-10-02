@@ -277,6 +277,105 @@ local-dsh-cds-mode-1.5.0.tgz   257 KB
 
 **产物**：98 个文件（新增 `README.md`），zip 365 KB。
 
+### 追补（同日）：按官方文档补全安装方式 + 公开 README 同步
+
+用户要求"根据官方文档，对插件进行更新：1. 安装模式/方法的增加 2. 公开 readme 的同步修改"。
+
+**去读了官方源文件，不凭记忆写**（上次 Host 平面判断错误就是因为凭记忆）：
+
+| 官方来源 | 关键事实 |
+|---|---|
+| `dsh --help` | 存在 `dsh plugin --profile <name> <pnpm-args...>`，官方示例 `dsh plugin --profile tui add <package>` |
+| `dsh-client-ui-plugin-manager/README.md` | **Web 界面有 Plugins 页**：侧边栏 → Plugins → **Add plugin**，接受「包名 / Git 地址 / tarball / 绝对本地路径」 |
+| `dsh-plugin-manager/lib/types/install-spec.js` | **四种 spec 的权威判定正则**（逐行读过） |
+| `dsh-plugin-manager/README.md` | install 的预检、registry 轮询、build 审批、版本豁免 |
+| `dsh-web-app/cordis.patch.yml` L300 | 本 profile **确实挂了** `ui-plugin-manager`，Web 路径可用 |
+
+### 新增：四条官方安装路径
+
+原来 `INSTALL.md` **只写了 agent 工具一条路**，而最容易被发现的 Web 界面路径完全没提。现在两条文档都写全：
+
+| 方式 | 入口 | 需 GitHub 可达 |
+|---|---|---|
+| **Web 界面** | 侧边栏 Plugins → Add plugin → 仓库地址 | 是 |
+| **命令行** | `dsh plugin --profile web add <spec>` | 是 |
+| **agent 工具** | `plugin_manager` 的 `install_bundle` | 视 spec 而定 |
+| **压缩包** | `install_bundle` 指向本地绝对路径 | **否** |
+
+**并写清了 `target` 接受的四种 spec 形式**（依据 `install-spec.js` 的真实正则，实测 19 种写法）：
+
+- git 地址：`https://github.com/DRQRTS/dsh-cds-mode`、`github:DRQRTS/dsh-cds-mode`、`git+https://...`
+- 绝对路径：`D:\...`、`/home/...`，`file:` / `link:` 前缀也认
+- tarball：本地或远程 `.tgz` / `.tar.gz`
+- registry 包名：`@scope/name@version`
+
+**被拒的写法**：相对路径（`./x`、`../x`）、非 git 非 tarball 的 URL。
+
+### 新增：GitHub 不可达处置（本机实测踩到）
+
+写文档过程中本机 GitHub **突然不可达**（`git ls-remote` 连续 3 次 `Failed to connect to github.com port 443`，每次 22 秒超时）。诊断结论：
+
+- `github.com` DNS 能解析（172.182.252.133），**TCP 443 不通**
+- `registry.npmmirror.com` 通
+- 系统代理 `127.0.0.1:10808` **开着**，但 **git 没配代理**
+- 给 git 配上代理后 `ls-remote` 立刻 `exit=0`
+
+**这是用户会真实遇到的问题，所以文档必须写**：
+
+1. 症状（`Cannot access GitHub` / 22 秒超时）
+2. 修法一：`git config --global http.proxy http://127.0.0.1:7890`（换成自己的端口）
+3. 修法二：改用压缩包方式（完全绕开 GitHub）
+4. **澄清一个常见误解**：npmmirror **解决不了这个问题**——它镜像的是 registry 上的包，不镜像 GitHub 仓库。这正是 Web 界面在你选镜像后提示 `Try another way` 的原因。
+
+**同时**：已给本机 git 配好代理（`http.proxy` / `https.proxy` = `http://127.0.0.1:10808`），`.gitconfig` 备份在 `~/.gitconfig.bak-before-proxy`。**否则连推自己仓库都会挂。**
+
+### 新增：插件不会自动更新（官方信任框原话）
+
+官方安装对话框的信任框写明：**已安装的插件不会自动更新**，升级 = 卸载 + 装新版本。
+
+这条原来没写，而它直接影响用户的升级操作。已补进两份文档，并修正了 `INSTALL.md` 里**与新事实矛盾的旧说法**（原来写"解压新版本 → 对同一 target 路径执行 install_bundle"，那会留下两个 bundle 冲突）。
+
+### 顺带修掉的一个真 bug：文档承诺了不存在的文件
+
+公开 README 里有一张「校验脚本」表列了 9 个 `.mjs`，还叫读者跑：
+
+```bash
+node _verify3.mjs && node _verify-corpus.mjs
+```
+
+**但这 9 个脚本既不在 `files` 白名单里（zip/tgz 里没有），也不在仓库里。** 读者照做会 `MODULE_NOT_FOUND`。
+
+**修法**：`files` 加 `_*.mjs`，并把整组加进仓库——它们**互相依赖**（`_pack` → `_sync-corpus` + `_zip`；`_verify3` → `_patch-reader`），必须整组存在。
+
+**实测确认**：解压 zip 后在包内跑两套校验，插件层全过，语料层**正确识别为"发布态"**并跳过漂移检查（因为旁边没有源语料库）——不是报错。这条设计原来就写对了，现在才真正可被验证。
+
+### 验证
+
+新增 **B6 组「公开文档」19 项断言**，把两份文档的一致性变成门禁：
+
+- 四条安装路径都必须写到
+- git 地址写法、绝对路径要求、`.zip` 不被接受，都必须说明
+- 必须强调重启、必须说明不自动更新
+- 必须写 GitHub 不可达处置与镜像澄清
+- **章节号不得重号且必须连续**（这轮插入新节就一度造成两个「十一」）
+- **不得残留旧仓库地址**（仓库被从 `dsh` 改名为 `dsh-cds-mode`）
+- 不得出现过时的断言数（`130+`）
+
+**这轮新增的 4 条断言全部拦下了真实问题**：章节重号、旧地址残留、脚本缺失、断言数过时。
+
+**断言总数**：203 → **222**（插件层 123 + 语料层 99）。
+
+### 缓存影响
+
+- 注入内容 **67,718 → 67,640 字符**（`web/00-组索引.md` 未变；差异来自 `cds/` 内文档微调），**本预设会话前缀失效一次**。
+- 新前缀仍逐字节确定。
+
+### 已知未决
+
+- 仓库已改名为 **`DRQRTS/dsh-cds-mode`**（这是用户自己改的，我推送时 GitHub 提示 `This repository moved`）。旧地址 `DRQRTS/dsh` 仍重定向，但文档已全部改用规范名。
+- **四条安装路径中，只有"压缩包 + agent 工具"这条路我在本机验证过。** Web 界面与 CLI 两条路我只确认了**组件存在与语法正确**（`ui-plugin-manager` 已挂载、`dsh --help` 列出 `plugin` 子命令、spec 正则实测接受），**没有真的点过界面、也没真的跑过 `dsh plugin add`** —— 因为那会在现有 profile 上装第二个同名 bundle 造成冲突。
+- 运行中的 `dsh web` 仍早于本轮全部改动。
+
 ---
 
 ## v1.4.0
