@@ -1,0 +1,116 @@
+{
+  "_comment": "CDS 模式状态机。由晨唯一维护。此文件是机器可读真相源，state.md 是它的人类可读快照。",
+
+  "cds_version": "1.0.0",
+  "project": {
+    "name": "",
+    "code": "",
+    "slug": ""
+  },
+
+  "node": "INTAKE",
+  "_node_values": ["INTAKE", "CALIBRATE", "CLARIFY", "INVENTORY", "RESEARCH", "DESIGN", "BUILD", "TEST", "TRIAGE", "DONE"],
+
+  "round": 0,
+  "chain": ["INTAKE"],
+
+  "calibration": {
+    "level": null,
+    "_level_values": ["L1", "L2", "L3", "L4"],
+    "scores": {},
+    "decided_by": "",
+    "expression_policy": "",
+    "question_volume_target": 0,
+    "delegation_preference": "",
+    "at": ""
+  },
+
+  "inventory": {
+    "_comment": "首次对话的判定结果",
+    "project_kind": null,
+    "_project_kind_values": ["new", "takeover", "version-change", "feature-fix"],
+    "decided_by": [],
+    "reason": "",
+    "at": ""
+  },
+
+  "takeover": {
+    "_comment": "仅接手项目使用",
+    "author": "",
+    "_author_values": ["self", "colleague", "outsourced", "open-source", "inherited"],
+    "authorization_radius": null,
+    "_authorization_radius_values": ["R0", "R1", "R2", "R3"],
+    "frozen_list_confirmed": false,
+    "runs_currently": null,
+    "in_production": null,
+    "real_users": null,
+    "backup_verified": null
+  },
+
+  "version_decision": {
+    "decision": null,
+    "_decision_values": ["feature", "version", "rewrite"],
+    "signals": [],
+    "asked": false,
+    "reason": "",
+    "at": ""
+  },
+
+  "requirements": {
+    "total": 0,
+    "confirmed_by_user": false,
+    "confirmed_at": "",
+    "conflicts_open": [],
+    "delegated_to_agent": [],
+    "not_collected": []
+  },
+
+  "gates": {
+    "_comment": "门禁通过状态。false 表示下游不得开工。",
+    "research_integrated": false,
+    "design_closed_by_b4": false,
+    "build_report_complete": false,
+    "security_layer_done": false,
+    "bug_summary_complete": false
+  },
+
+  "bugs": {
+    "S1": 0,
+    "S2": 0,
+    "S3": 0,
+    "S4": 0,
+    "S5": 0,
+    "net_change_last_round": 0,
+    "consecutive_non_increasing": 0,
+    "history": []
+  },
+
+  "degradation": {
+    "_comment": "人格降级记录。静默降级是违规的。",
+    "active": []
+  },
+
+  "circuit_break": {
+    "active": false,
+    "trigger": null,
+    "at": "",
+    "awaiting_user_decision": false,
+    "options_offered": []
+  },
+
+  "cache": {
+    "_comment": "省钱相关。见 selfrescue/cache-economy.md",
+    "prefix_version": 1,
+    "prefix_stable": true,
+    "fulltext_transfers": 0,
+    "session_recreations": 0
+  },
+
+  "channel": {
+    "active_personas": [],
+    "unread_total": 0,
+    "blocked_handoffs": 0
+  },
+
+  "updated_at": ""
+}

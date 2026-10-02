@@ -1,0 +1,359 @@
+# CDS mode (Chen's DS) bundle patch
+# ============================================================================
+# Adds:
+#   1. Host-plane rows for the Agent Teams peer channel.
+#   2. TWO agent presets, so a failure in the experimental team rows can never
+#      leave the user without a working CDS mode.
+#
+# ── The peer channel: corrected 2026-09-30 (v1.3.1) ─────────────────────────
+# Three wiring mistakes were found by reading the authoritative
+# `@deepseek-ai/dsh-experimental-agent-team-profile` bundle instead of
+# hand-rolling the composition:
+#
+#   a) `agent-team` MUST be a TOP-LEVEL (host-plane) row, not a preset row.
+#      Its inject is [agents, sessions, sessionPersistence, sessionProjections,
+#      subagents] — no scope requirement — and every method takes an explicit
+#      `agent` argument ("the exact live Agent used as the authority
+#      credential"). The official patch inserts it at the top level.
+#      v1.1.1 moved it inside the preset on a wrong guess; that is reverted.
+#   b) The Web UI row `ui-agent-team` was MISSING. That row is the roster, the
+#      shared task board, and teammate navigation in the Web conversation
+#      header. Without it nothing looks collaborative — exactly the user's
+#      report "未发现有协同功能".
+#   c) The team tools REPLACE the legacy delegation tools. The official bundle
+#      DISABLES tool-subagent-control / tool-subagent-list-agents /
+#      tool-subagent / tool-subagent-fork so all delegation goes through the
+#      Team tools. Leaving `subagent` enabled let the model take the legacy
+#      spawn path, whose children CANNOT message each other — the "协同做的不好"
+#      report. preset-cds-team now disables all four, matching the official
+#      layer.
+#
+# Why preset-cds mounts no team package at all:
+#   A failure in an experimental row must never cost the user CDS mode. This
+#   preset composes only plain packages.
+#
+# Why there is no `persona` row:
+#   The cds-mode host plugin registers the scoped `deployment:persona-prefix`
+#   section itself. Mounting dsh-persona as well would register a SECOND scoped
+#   section under the same name; the prompt registry rejects duplicates within
+#   one layer, so that is an activation failure rather than an override.
+#
+# Cache note (cds/selfrescue/cache-economy.md rules P1/P4): every row below is
+# static. Nothing here interpolates time, round, session or count.
+
+# ── 1. Host plane: the peer channel (service + Web UI) ──────────────────────
+# Mirrors the official `agent-team-profile` patch.
+- insert:
+    - id: agent-team
+      name: '@deepseek-ai/dsh-experimental-agent-team'
+      config:
+        # Official default is 8; CDS dispatch rules cap one batch at 8
+        # instances, so 8 members is the honest ceiling.
+        maxMembers: 8
+        maxTasks: 256
+        maxPendingMessagesPerMember: 64
+        maxMessageBytes: 65536
+        disposalTimeoutMs: 5000
+
+    # Roster + shared task board + teammate navigation in the conversation
+    # header. The root Host export is inert; the Web Client loader mounts its
+    # `/client` export. This is the row that makes collaboration VISIBLE.
+    - id: ui-agent-team
+      name: '@deepseek-ai/dsh-experimental-client-ui-agent-team'
+
+# ── 2a. Preset: CDS mode, baseline (no experimental dependency) ─────────────
+- insert:
+    - id: preset-cds
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: cds
+        name: CDS 模式（晨的DS）
+        description: >-
+          CDS 模式：主人格晨 + 调查组/设计组/开发组/测试组/其他组。先提问再动手，
+          两条闭环工作流，bug 不藏，循环必须收敛，缓存前缀稳定。
+        order: 5
+        plugins:
+          # Identity plus the whole CDS operating contract, read from the
+          # corpus on disk at activation.
+          #
+          # `corpusDir` is deliberately OMITTED: the plugin defaults to the
+          # corpus bundled in this package (./cds/), so the mode works on any
+          # machine with no configuration. Point it elsewhere only if you keep
+          # your own corpus copy.
+          - id: cds-mode
+            name: '@local/dsh-cds-mode'
+            config:
+              maxChars: 200000
+              # Keep false: reloading rewrites the system-prompt prefix and
+              # drops this session's prompt cache.
+              liveReload: false
+
+          # NOTE: deliberately NO `persistent-shell` group here.
+          # That group (copied from the `minimal` preset) registers a
+          # PERSISTENT tool also named "pwsh", while `tool-pwsh` below
+          # registers the transient one. Both in one scope is a hard
+          # duplicate-name failure:
+          #   tool "pwsh" is already registered in this scope
+          # The `standard` preset mounts `tool-pwsh` alone; so do we.
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+            disabled: !!js process.platform === 'win32'
+          - id: tool-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh'
+            disabled: !!js process.platform !== 'win32'
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+          - id: tool-jobs
+            name: '@deepseek-ai/dsh-tool-jobs'
+          - id: skill-filesystem
+            name: '@deepseek-ai/dsh-skill-filesystem'
+          - id: tool-skill
+            name: '@deepseek-ai/dsh-tool-skill'
+          - id: command-goal
+            name: '@deepseek-ai/dsh-command-goal'
+          - id: tool-goal
+            name: '@deepseek-ai/dsh-tool-goal'
+
+          - id: planning
+            name: cordis:group
+            group: true
+            isolate:
+              planMode: true
+            config:
+              - id: plan-mode
+                name: '@deepseek-ai/dsh-plan-mode'
+                config:
+                  section: |
+                    You are in plan mode, inside CDS mode. Stay in plan mode until exit_plan_mode succeeds or the user switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
+
+                    Explore first. Use non-mutating reads, searches, static analysis, and checks to ground the plan in the actual repository. Do not edit or write files, change configuration, run formatters or code generation that rewrites tracked files, commit, or otherwise carry out the plan. Prefer existing functions and patterns over new machinery.
+
+                    The tool catalog stays the same across modes for request-cache stability. These plan-mode rules override any later tool description or guidance that suggests using mutation tools; those tools remain listed to keep the tool catalog unchanged. Do not use todo_write to track this planning phase: it tracks implementation after an approved plan, while the plan itself belongs in exit_plan_mode.
+
+                    Resolve discoverable facts by inspection. Use ask_user_question only for user-owned choices or material ambiguity that inspection cannot answer. Do not ask the user where code lives or how current behavior works when you can find out.
+
+                    CDS mode still applies here: the same L1-L7 iron rules, the same state machine, and the same question protocol. In plan mode you are still Chen, and you still ask 5-10 questions before deepening your understanding of a new requirement.
+
+                    Make the plan decision-complete: state the goal and success criteria; group implementation changes by subsystem; identify public API, schema, and data-flow changes; cover edge cases, failure modes, tests, acceptance criteria, and explicit assumptions. Keep it concise enough to review but detailed enough that another engineer can implement it without making design decisions. State the cost of every choice, as CDS group B requires.
+
+                    When ready, call exit_plan_mode with the complete plan markdown, starting with a # title. Make exit_plan_mode the only and final tool call in that assistant response: it presents the plan for approval, and implementation begins only in a later step after approval. Do not paste the final plan as a plain reply or ask "should I proceed?" through prose or ask_user_question. If review rejects it, incorporate the feedback and present again. If the review channel is unavailable or aborted, stay in plan mode and ask the user to switch modes manually; do not proceed with implementation.
+
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+              toolResultPruner: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+              - id: command-compact
+                name: '@deepseek-ai/dsh-command-compact'
+              - id: tool-result-pruner
+                name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+                config:
+                  thresholdChars: 8192
+                  headChars: 4096
+                  tailChars: 1024
+
+          - id: delegation
+            name: cordis:group
+            group: true
+            isolate:
+              workflowEngine: true
+            config:
+              - id: tool-subagent-control
+                name: '@deepseek-ai/dsh-tool-subagent-control'
+              - id: tool-subagent-list-agents
+                name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
+              - id: tool-subagent
+                name: '@deepseek-ai/dsh-tool-subagent'
+                config:
+                  provider: spawn
+                  toolName: subagent
+                  modelSelectionSettings: true
+                  backgroundMode: continuable
+              - id: tool-subagent-fork
+                name: '@deepseek-ai/dsh-tool-subagent'
+                config:
+                  provider: fork
+                  toolName: subagent_fork
+                  backgroundMode: continuable
+              - id: workflow-ptc
+                name: '@deepseek-ai/dsh-workflow-ptc'
+                config:
+                  provider: spawn
+              - id: tool-workflow
+                name: '@deepseek-ai/dsh-tool-workflow'
+
+          - id: tool-ask-user
+            name: '@deepseek-ai/dsh-tool-ask-user'
+          - id: tool-todo
+            name: '@deepseek-ai/dsh-tool-todo'
+            config:
+              allowParallelInProgress: true
+          - id: tool-web
+            name: '@deepseek-ai/dsh-tool-web'
+            config:
+              fetch: true
+              searchTimeoutMs: 60000
+          - id: present
+            name: '@deepseek-ai/dsh-tool-present'
+
+# ── 2b. Preset: CDS mode with the Agent Teams peer channel ──────────────────
+# Same composition as preset-cds, with two differences:
+#
+#   1. It mounts `tool-agent-team` (the nine Team tools). The Team service and
+#      the Web UI row live on the host plane, above — shared by every preset.
+#   2. It DISABLES all four legacy delegation rows, matching the official
+#      `agent-team-profile` layer. This matters: the Team tools replace them, and
+#      a legacy `subagent` child CANNOT message its siblings. Leaving the legacy
+#      path open let the model spawn children that could not coordinate — the
+#      "协同做的不好" report.
+- insert:
+    - id: preset-cds-team
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: cds-team
+        name: CDS 模式 · 同伴频道版
+        description: >-
+          CDS 模式 + Agent Teams 同伴频道：人格之间可以直接互相说话、共享任务板，
+          不需要晨作为传话桥梁。适用于需要 A/B/C/D 组多人格并行协作的项目。
+        order: 6
+        plugins:
+          - id: cds-mode
+            name: '@local/dsh-cds-mode'
+            config:
+              maxChars: 200000
+              liveReload: false
+
+          # The nine Team tools: spawn_teammate / send_message / list_agents /
+          # task board / interrupt / wait. They consume the host-plane
+          # ctx.agentTeams. Defaults kept on purpose — overriding forkProvider
+          # would add a provider dependency this preset is about to disable.
+          - id: tool-agent-team
+            name: '@deepseek-ai/dsh-experimental-tool-agent-team'
+
+          # NOTE: deliberately NO `persistent-shell` group here.
+          # That group (copied from the `minimal` preset) registers a
+          # PERSISTENT tool also named "pwsh", while `tool-pwsh` below
+          # registers the transient one. Both in one scope is a hard
+          # duplicate-name failure:
+          #   tool "pwsh" is already registered in this scope
+          # The `standard` preset mounts `tool-pwsh` alone; so do we.
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+            disabled: !!js process.platform === 'win32'
+          - id: tool-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh'
+            disabled: !!js process.platform !== 'win32'
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+          - id: tool-jobs
+            name: '@deepseek-ai/dsh-tool-jobs'
+          - id: skill-filesystem
+            name: '@deepseek-ai/dsh-skill-filesystem'
+          - id: tool-skill
+            name: '@deepseek-ai/dsh-tool-skill'
+          - id: command-goal
+            name: '@deepseek-ai/dsh-command-goal'
+          - id: tool-goal
+            name: '@deepseek-ai/dsh-tool-goal'
+
+          - id: planning
+            name: cordis:group
+            group: true
+            isolate:
+              planMode: true
+            config:
+              - id: plan-mode
+                name: '@deepseek-ai/dsh-plan-mode'
+                config:
+                  section: |
+                    You are in plan mode, inside CDS mode. Stay in plan mode until exit_plan_mode succeeds or the user switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
+
+                    Explore first. Use non-mutating reads, searches, static analysis, and checks to ground the plan in the actual repository. Do not edit or write files, change configuration, run formatters or code generation that rewrites tracked files, commit, or otherwise carry out the plan. Prefer existing functions and patterns over new machinery.
+
+                    The tool catalog stays the same across modes for request-cache stability. These plan-mode rules override any later tool description or guidance that suggests using mutation tools; those tools remain listed to keep the tool catalog unchanged. Do not use todo_write to track this planning phase: it tracks implementation after an approved plan, while the plan itself belongs in exit_plan_mode.
+
+                    Resolve discoverable facts by inspection. Use ask_user_question only for user-owned choices or material ambiguity that inspection cannot answer. Do not ask the user where code lives or how current behavior works when you can find out.
+
+                    CDS mode still applies here: the same L1-L7 iron rules, the same state machine, and the same question protocol. In plan mode you are still Chen, and you still ask 5-10 questions before deepening your understanding of a new requirement.
+
+                    Make the plan decision-complete: state the goal and success criteria; group implementation changes by subsystem; identify public API, schema, and data-flow changes; cover edge cases, failure modes, tests, acceptance criteria, and explicit assumptions. Keep it concise enough to read but detailed enough that another engineer can implement it without making design decisions. State the cost of every choice, as CDS group B requires.
+
+                    When ready, call exit_plan_mode with the complete plan markdown, starting with a # title. Make exit_plan_mode the only and final tool call in that assistant response: it presents the plan for approval, and implementation begins only in a later step after approval. Do not paste the final plan as a plain reply or ask "should I proceed?" through prose or ask_user_question. If review rejects it, incorporate the feedback and present again. If the review channel is unavailable or aborted, stay in plan mode and ask the user to switch modes manually; do not proceed with implementation.
+
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+              toolResultPruner: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+              - id: command-compact
+                name: '@deepseek-ai/dsh-command-compact'
+              - id: tool-result-pruner
+                name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+                config:
+                  thresholdChars: 8192
+                  headChars: 4096
+                  tailChars: 1024
+
+          - id: delegation
+            name: cordis:group
+            group: true
+            isolate:
+              workflowEngine: true
+            config:
+              # ── Legacy delegation rows: DISABLED on purpose ──────────────
+              # The nine Team tools replace them in this preset. A legacy
+              # `subagent` child cannot message its siblings, so leaving this
+              # path open lets the model spawn children that cannot coordinate.
+              # This matches the official `agent-team-profile` layer.
+              - id: tool-subagent
+                name: '@deepseek-ai/dsh-tool-subagent'
+                disabled: true
+                config:
+                  provider: spawn
+                  toolName: subagent
+                  modelSelectionSettings: true
+                  backgroundMode: continuable
+              - id: tool-subagent-fork
+                name: '@deepseek-ai/dsh-tool-subagent'
+                disabled: true
+                config:
+                  provider: fork
+                  toolName: subagent_fork
+                  backgroundMode: continuable
+              # ── Kept: the workflow engine (not a delegation-tool conflict) ──
+              - id: workflow-ptc
+                name: '@deepseek-ai/dsh-workflow-ptc'
+                config:
+                  provider: spawn
+              - id: tool-workflow
+                name: '@deepseek-ai/dsh-tool-workflow'
+
+          - id: tool-ask-user
+            name: '@deepseek-ai/dsh-tool-ask-user'
+          - id: tool-todo
+            name: '@deepseek-ai/dsh-tool-todo'
+            config:
+              allowParallelInProgress: true
+          - id: tool-web
+            name: '@deepseek-ai/dsh-tool-web'
+            config:
+              fetch: true
+              searchTimeoutMs: 60000
+          - id: present
+            name: '@deepseek-ai/dsh-tool-present'

@@ -1,0 +1,13 @@
+# Build output. `node _pack.mjs` writes the distributable .zip / .tgz here.
+dist/
+
+# Dependencies. This package declares none, and intends to keep it that way —
+# index.js imports only `node:` builtins.
+node_modules/
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

@@ -1,0 +1,53 @@
+{
+  "name": "@local/dsh-cds-mode",
+  "version": "1.5.0",
+  "private": true,
+  "type": "module",
+  "description": "CDS 模式（Chen's DS）——把「标准模式 + 创造模式 + 自救模式（省钱）」合并成一个多智能体开发模式，装成 DSH agent 预设。你和唯一的主人格「晨」对话，它带着 56 个人格分头干活、互相直接交接，最后把结果交回你手上。含 A/B/C/D/E 五组 21 个人格、C-WEB 网络安全附属工作流（八组 35 个人格，含不可绕过的策略门与隐私一票否决）、两条闭环工作流、生成式提问机制与提示词缓存约束。零外部依赖，语料随包自带。",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "agent-preset",
+    "bundle",
+    "multi-agent",
+    "cds",
+    "security-workflow"
+  ],
+  "license": "MIT",
+  "meta": {
+    "title": "CDS 模式（晨的DS）",
+    "description": "多智能体开发模式：你和晨对话，它带 56 个人格分头干活、互相直接交接。含网络安全附属工作流。零外部依赖。"
+  },
+  "icon": "./icon.svg",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "README.md",
+    "INSTALL.md",
+    "package.json",
+    "index.js",
+    "cordis.patch.yml",
+    "icon.svg",
+    "locale/*.json",
+    "cds/*.md",
+    "cds/*/*.md",
+    "cds/*/*/*.md",
+    "cds/*.json",
+    "cds/*/*.json",
+    "cds/*/*/*.json"
+  ],
+  "scripts": {
+    "sync": "node _sync-corpus.mjs",
+    "sync:check": "node _sync-corpus.mjs --check",
+    "verify": "node _verify3.mjs && node _verify-corpus.mjs",
+    "pack": "node _pack.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

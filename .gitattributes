@@ -1,0 +1,22 @@
+# Normalize all text to LF in the repository.
+#
+# This is not cosmetic. The bundled corpus is verified for LF endings and no
+# BOM (`_verify-corpus.mjs` group A), and the plugin's prompt prefix must be
+# byte-identical across machines — a CRLF checkout would change the digest and
+# break the prompt-cache contract documented in cds/selfrescue/cache-economy.md.
+* text=auto eol=lf
+
+# Markdown, JS, JSON and YAML are all text here.
+*.md    text eol=lf
+*.mjs   text eol=lf
+*.js    text eol=lf
+*.json  text eol=lf
+*.yml   text eol=lf
+*.svg   text eol=lf
+
+# Binary formats that may be added later.
+*.zip   binary
+*.tgz   binary
+*.png   binary
+*.jpg   binary
+*.ico   binary
