@@ -37,7 +37,7 @@ DSH 提供**四条**安装路径。四条装完都必须**重启**，效果完�
 1. 打开 Web 界面（`dsh web` 后）
 2. 侧边栏点 **Plugins**
 3. **Add plugin**
-4. 填仓库地址：`https://github.com/DRQRTS/dsh`
+4. 填仓库地址：`https://github.com/DRQRTS/dsh-cds-mode`
 5. 选 **Registry**（默认即可），勾选信任确认框
 6. **Install** → 重启
 
@@ -48,7 +48,7 @@ DSH 提供**四条**安装路径。四条装完都必须**重启**，效果完�
 ### 方式 B：命令行
 
 ```bash
-dsh plugin --profile web add https://github.com/DRQRTS/dsh
+dsh plugin --profile web add https://github.com/DRQRTS/dsh-cds-mode
 ```
 
 `--profile` 是**必需**参数（不写会报 `required option '--profile <name>' not specified`）。
@@ -60,7 +60,7 @@ dsh plugin --profile web add https://github.com/DRQRTS/dsh
 
 在一个 DSH 会话里说：
 
-> 帮我安装插件：https://github.com/DRQRTS/dsh
+> 帮我安装插件：https://github.com/DRQRTS/dsh-cds-mode
 
 agent 会调用：
 
@@ -77,7 +77,7 @@ plugin_manager  action: install_bundle
 
 | 形式 | 例子 | 备注 |
 |---|---|---|
-| **git 地址** | `https://github.com/DRQRTS/dsh`<br>`github:DRQRTS/dsh`<br>`git+https://github.com/DRQRTS/dsh.git` | 会先跑 `git ls-remote` 预检 |
+| **git 地址** | `https://github.com/DRQRTS/dsh-cds-mode`<br>`github:DRQRTS/dsh-cds-mode`<br>`git+https://github.com/DRQRTS/dsh-cds-mode.git` | 会先跑 `git ls-remote` 预检 |
 | **绝对路径** | `D:\SuperAI Power\dsh-repo`<br>`/home/me/dsh` | **必须绝对**；相对路径被拒 |
 | **tarball** | `...\local-dsh-cds-mode-1.5.0.tgz`<br>`https://.../x.tgz` | 本地或远程都行 |
 | **registry 包名** | `@drqrts/cds-mode@1.5.0` | 需已发布到 registry |
@@ -285,7 +285,7 @@ git config --global https.proxy http://127.0.0.1:7890
 端口换成你自己的，然后验证：
 
 ```bash
-git ls-remote https://github.com/DRQRTS/dsh HEAD
+git ls-remote https://github.com/DRQRTS/dsh-cds-mode HEAD
 ```
 
 能打印出一串 commit hash 就通了。

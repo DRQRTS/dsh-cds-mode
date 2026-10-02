@@ -170,7 +170,7 @@ AI 手上什么工具都有。**默认行为倾向就是"顺手把这块也写�
 4. 在输入框里填仓库地址：
 
    ```
-   https://github.com/DRQRTS/dsh
+   https://github.com/DRQRTS/dsh-cds-mode
    ```
 
 5. 选好 **Registry**（默认即可），勾选上方的信任确认框
@@ -184,7 +184,7 @@ AI 手上什么工具都有。**默认行为倾向就是"顺手把这块也写�
 ### 方式二：命令行装（适合脚本化）
 
 ```bash
-dsh plugin --profile web add https://github.com/DRQRTS/dsh
+dsh plugin --profile web add https://github.com/DRQRTS/dsh-cds-mode
 ```
 
 （`web` 是你的 profile 名。不指定 `--profile` 会报错，这个参数是必需的。）
@@ -195,7 +195,7 @@ dsh plugin --profile web add https://github.com/DRQRTS/dsh
 
 在一个 DSH 会话里说：
 
-> 帮我安装插件：https://github.com/DRQRTS/dsh
+> 帮我安装插件：https://github.com/DRQRTS/dsh-cds-mode
 
 agent 会调用 `plugin_manager` 工具的 `install_bundle`。这一步需要 `danger-full-access` 权限。
 
@@ -312,7 +312,7 @@ git config --global https.proxy http://127.0.0.1:7890
 把端口换成你自己的。配完验证：
 
 ```bash
-git ls-remote https://github.com/DRQRTS/dsh HEAD
+git ls-remote https://github.com/DRQRTS/dsh-cds-mode HEAD
 ```
 
 能打印出一串 commit hash 就通了。
