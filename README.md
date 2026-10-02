@@ -158,9 +158,50 @@ AI 手上什么工具都有。**默认行为倾向就是"顺手把这块也写�
 
 ## 八、安装
 
-**前置条件**：装好 DeepSeek Harness，能跑 `dsh web`。**不需要联网，不需要 npm 登录，本包零外部依赖。**
+**前置条件**：装好 DeepSeek Harness，能跑 `dsh web`。**不需要 npm 登录，本包零外部依赖。**
 
-### 第 1 步：解压到长期目录
+四种装法，选一种就行。**推荐先看第一种**（最省事），或者直接跳到第四种（最不依赖网络）。
+
+### 方式一：Web 界面装（最省事）
+
+1. 打开 DSH 的 Web 界面（`dsh web` 后面板）
+2. 侧边栏点 **Plugins**
+3. 点 **Add plugin**
+4. 在输入框里填仓库地址：
+
+   ```
+   https://github.com/DRQRTS/dsh
+   ```
+
+5. 选好 **Registry**（默认即可），勾选上方的信任确认框
+6. 点 **Install**
+7. **重启 `dsh web`**
+
+> **注意信任框里那句话**：**已安装的插件不会自动更新** —— 升级的做法是**卸载再装新版本**。
+>
+> 勾选它代表你确认了这一点。装插件会在你的 profile 里执行包里的代码（这是插件机制的通用性质，不是本包的特殊要求）。装之前你可以自己读一遍 `index.js`，约 400 行，只用 Node 内建模块。
+
+### 方式二：命令行装（适合脚本化）
+
+```bash
+dsh plugin --profile web add https://github.com/DRQRTS/dsh
+```
+
+（`web` 是你的 profile 名。不指定 `--profile` 会报错，这个参数是必需的。）
+
+装完同样**重启**。
+
+### 方式三：让 agent 装
+
+在一个 DSH 会话里说：
+
+> 帮我安装插件：https://github.com/DRQRTS/dsh
+
+agent 会调用 `plugin_manager` 工具的 `install_bundle`。这一步需要 `danger-full-access` 权限。
+
+### 方式四：从压缩包装（不依赖 GitHub）
+
+如果 GitHub 连不上（**中国大陆常见**，见下面第十一节），用这条：
 
 ```bash
 mkdir -p ~/dsh-bundles
@@ -168,21 +209,27 @@ unzip dsh-cds-mode-1.5.0.zip -d ~/dsh-bundles
 # 得到 ~/dsh-bundles/package/
 ```
 
-> **为什么强调"长期保留"**：安装用的是软链接方式，DSH 会**指向**这个目录。目录删了，插件就加载失败。
-
-### 第 2 步：安装
-
-在一个 DSH 会话里，让 agent 执行：
+然后让 agent 装这个**目录**：
 
 ```
 plugin_manager  action: install_bundle
                 target: /绝对路径/到/解压出的/package
 ```
 
-> `install_bundle` 接受 registry 包、git 地址、tarball、绝对路径。**不接受 `.zip` 本身** —— 所以要先解压。
-> 这一步需要 `danger-full-access` 权限，因为它会执行包里的代码（这是插件机制的通用性质）。装之前你可以自己读一遍 `index.js`，约 400 行，只用 Node 内建模块。
+> **为什么强调"长期保留"**：安装用软链接方式，DSH 会**指向**这个目录。目录删了，插件就加载失败。
+>
+> `install_bundle` 接受 **registry 包**、**git 地址**、**tarball**、**绝对路径**四种。**不接受 `.zip` 本身** —— 所以要先解压。路径必须是**绝对路径**。
 
-### 第 3 步：重启
+### 四种装法对比
+
+| 方式 | 需要 GitHub 可达 | 需要重启 | 适合 |
+|---|---|---|---|
+| Web 界面 | 是 | 是 | 大多数人 |
+| 命令行 | 是 | 是 | 批量 / 脚本 |
+| agent 工具 | 视 spec 而定 | 是 | 已经习惯用对话 |
+| 压缩包 | **否** | 是 | GitHub 不通时 |
+
+### 最后一步：重启
 
 ```bash
 dsh web
@@ -190,7 +237,19 @@ dsh web
 
 **重启是必需的，刷新页面不够。** JS 模块是进程启动时加载的，新增或替换一个包必须重启才会加载。
 
-### 第 4 步：新建会话，选「CDS 模式」
+然后**新建会话**，预设里选「CDS 模式」。
+
+### 卸载与升级
+
+**卸载**：Web 界面的 Plugins 页找到 CDS 卡片 → 卸载；或让 agent 执行
+
+```
+plugin_manager  action: remove_bundle  target: @local/dsh-cds-mode
+```
+
+**升级**：因为插件不自动更新，升级 = **先卸载，再按上面任一方式装新版本**，然后重启。
+
+**卸载不影响你的项目产物** —— 那些在你的项目工作区里。
 
 ---
 
@@ -219,14 +278,54 @@ dsh web
 | 预设列表里没有 CDS 卡片 | 装完没重启 | 重启 `dsh web` |
 | 卡片标红「加载失败」 | 某一行激活失败 | 把诊断原文给发布者 |
 | 诊断说「内置语料缺失」 | 压缩包不完整 | 重新解压完整压缩包 |
+| 安装时报 `Cannot access GitHub` | GitHub 连不上 | **见第十一节**：配代理，或改用压缩包方式 |
+| 侧边栏没有 Plugins 页 | 这个 profile 没有托管 | 改用命令行或 agent 工具 |
 | 模型说"我是 coding agent…" | 选的是别的预设 | 确认会话预设是「CDS 模式」 |
 | 找不到任何协同入口 | 用的是「CDS 模式」 | 换「CDS 模式 · 同伴频道版」 |
 | 重复安装报 `ambiguous-install` | 同一目标已装 | **正常现象**，重启即可 |
+| 装了新版没变化 | 插件不自动更新 | 先**卸载**再装新版，然后重启 |
 | 缓存命中率突然变低 | 语料被改过（前缀变了） | 看包内 `cds/CHANGELOG.md` 的缓存影响记录 |
 
 ---
 
-## 十一、要如实说明的几点
+## 十一、GitHub 连不上怎么办
+
+**这是中国大陆用户最可能卡住的地方，所以单独说。**
+
+插件本身**不需要联网**（零外部依赖、语料随包自带）。但**前三种安装方式都要访问 GitHub**（要 clone 仓库）。
+
+### 症状
+
+- Web 界面弹 `Cannot access GitHub` 或 `GitHub connection timed out`
+- 命令行里 `git ls-remote` 或 `dsh plugin add` 卡住约 22 秒后失败
+- 报错形如 `Failed to connect to github.com port 443`
+
+### 怎么办
+
+**办法一：给 git 配代理**（如果你有代理）
+
+```bash
+git config --global http.proxy  http://127.0.0.1:7890
+git config --global https.proxy http://127.0.0.1:7890
+```
+
+把端口换成你自己的。配完验证：
+
+```bash
+git ls-remote https://github.com/DRQRTS/dsh HEAD
+```
+
+能打印出一串 commit hash 就通了。
+
+**办法二：改用压缩包方式**（不需要代理，最稳）
+
+按第八节的**方式四**，把 zip 解压到本地目录，让 agent 从**绝对路径**安装。这条路完全绕开 GitHub 和 npm registry。
+
+> 顺带说明：npm registry 的国内镜像（npmmirror）**帮不了这个问题** —— 它镜像的是 registry 上的包，不镜像 GitHub 仓库。所以「换镜像」对 GitHub 地址无效，这就是 Web 界面会提示 `Try another way` 的原因。
+
+---
+
+## 十二、要如实说明的几点
 
 **能保证的**
 
@@ -255,7 +354,7 @@ dsh web
 
 ---
 
-## 十二、想改点什么
+## 十三、想改点什么
 
 **改语料**：包内 `cds/` 就是全部规范文本。改完**重启**。
 
@@ -267,26 +366,50 @@ dsh web
 
 ---
 
-## 十三、文件在哪
+## 十四、文件在哪
 
 ```
-package/
-├── INSTALL.md          ← 安装与故障排查（偏操作）
-├── README.md           ← 本文件（偏了解）
-├── index.js            ← 插件本体，约 400 行，零外部依赖
-├── cordis.patch.yml    ← 预设与挂载配置
+dsh/                          ← GitHub 仓库根目录（也是 bundle 根目录）
+├── README.md                 ← 本文件（偏了解）
+├── INSTALL.md                ← 安装与故障排查（偏操作）
+├── package.json              ← 包定义：名称、版本、dsh.bundle.patch 指向
+├── index.js                  ← 插件本体，约 400 行，零外部依赖
+├── cordis.patch.yml          ← 预设与挂载配置（两个预设 + 同伴频道行）
 ├── icon.svg
-├── locale/             ← 中英文案
-└── cds/                ← 全部规范语料（90 个文件）
-    ├── CORE.md            运行契约：九条铁律、状态机、门禁、委任协议、编排纪律
-    ├── README.md          模式总入口与人格总览
-    ├── CHANGELOG.md       变更记录（含每次缓存失效登记）
-    ├── personas/          晨 + 21 个人格委任书 + 5 份组索引 + web/（36 份安全人格）
-    ├── workflow/          5 条工作流（新项目 / 接手 / 迭代 / 熔断 / 网络安全）
-    ├── protocol/          协同协议、产物契约、bug 分类法
-    ├── questions/         提问总纲 + 题库（校准 / 新项目 / 接手 / 追问）
-    ├── selfrescue/        省钱部分：缓存命中与前缀稳定化
-    └── web/               网络安全工作流的 8 份支撑文档
+├── locale/                   ← 中英文案
+└── cds/                      ← 全部规范语料（90 个文件）
+    ├── CORE.md                  运行契约：九条铁律、状态机、门禁、委任协议、编排纪律
+    ├── README.md                模式总入口与人格总览
+    ├── CHANGELOG.md             变更记录（含每次缓存失效登记）
+    ├── personas/                晨 + 21 个人格委任书 + 5 份组索引
+    │   └── web/                 网络安全模式的 36 份（含 chen-web）
+    ├── workflow/                5 条工作流（新项目 / 接手 / 迭代 / 熔断 / 网络安全）
+    ├── protocol/                协同协议、产物契约、bug 分类法
+    ├── questions/               提问总纲 + 题库（校准 / 新项目 / 接手 / 追问）
+    ├── selfrescue/              省钱部分：缓存命中与前缀稳定化
+    └── web/                     网络安全工作流的 8 份支撑文档
 ```
 
 想深入了解，从 `cds/CORE.md` 开始 —— 那是运行契约，其余都围绕它展开。
+
+### 校验脚本（可选，自测用）
+
+仓库里还有几个只用于开发和校验的文件，**安装插件用不到它们**：
+
+| 文件 | 作用 |
+|---|---|
+| `_verify3.mjs` | 插件层校验：结构、接线、可移植性、真实装载 |
+| `_verify-corpus.mjs` | 语料层校验：委任书要素、组特质一致性、死链 |
+| `_sync-corpus.mjs` | 语料同步（`--check` 只比对不写入） |
+| `_check-index.mjs` | 检查 git 索引内是否全为 LF 且无 BOM |
+| `_check-specs.mjs` | 验证各种安装写法能否被官方解析器接受 |
+| `_compare-extract.mjs` | 比对"解压产物 vs 源"是否逐字节一致 |
+| `_patch-reader.mjs` | 零依赖的 patch 结构读取器 |
+| `_zip.mjs` | 零依赖的 ZIP 写入器 |
+| `_pack.mjs` | 打包出 `.zip` 与 `.tgz` |
+
+你可以自己跑前两个（**共 203 项断言**）：
+
+```bash
+node _verify3.mjs && node _verify-corpus.mjs
+```

@@ -23,9 +23,72 @@
 
 ## 1. 安装
 
-### 方式 A：从压缩包（推荐）
+DSH 提供**四条**安装路径。四条装完都必须**重启**，效果完全相同，选一条即可。
 
-**第 1 步**，解压到一个**长期保留**的目录（不要放临时目录，删了插件就坏）：
+| 方式 | 入口 | 需要 GitHub 可达 | 适合 |
+|---|---|---|---|
+| **A · Web 界面** | 侧边栏 Plugins → Add plugin | 是 | 大多数人，最省事 |
+| **B · 命令行** | `dsh plugin --profile web add` | 是 | 批量 / 脚本化 |
+| **C · agent 工具** | `plugin_manager` 的 `install_bundle` | 视 spec 而定 | 已经习惯用对话 |
+| **D · 压缩包** | `install_bundle` 指向本地绝对路径 | **否** | GitHub 不通时 |
+
+### 方式 A：Web 界面（推荐）
+
+1. 打开 Web 界面（`dsh web` 后）
+2. 侧边栏点 **Plugins**
+3. **Add plugin**
+4. 填仓库地址：`https://github.com/DRQRTS/dsh`
+5. 选 **Registry**（默认即可），勾选信任确认框
+6. **Install** → 重启
+
+> 信任框里写明：**已安装的插件不会自动更新** —— 升级要卸载后装新版。
+> 若出现 `Cannot access GitHub`，见第 6 节的代理说明。
+> 侧边栏若没有 Plugins 页（该 profile 没有托管），改用方式 B 或 C。
+
+### 方式 B：命令行
+
+```bash
+dsh plugin --profile web add https://github.com/DRQRTS/dsh
+```
+
+`--profile` 是**必需**参数（不写会报 `required option '--profile <name>' not specified`）。
+`web` 是 profile 名，换成你自己的。
+
+这条命令是把参数转给 pnpm 的薄封装，所以也接受 pnpm 的其它 spec 形式（见下）。
+
+### 方式 C：agent 工具
+
+在一个 DSH 会话里说：
+
+> 帮我安装插件：https://github.com/DRQRTS/dsh
+
+agent 会调用：
+
+```
+plugin_manager  action: install_bundle
+                target: <spec>
+```
+
+**权限提示**：这一步需要 `danger-full-access`，或在允许审批的模式下批准那一次调用。它会执行你给的包里的代码——这是插件机制本身的性质，不是本包的特殊要求。**装之前可以自己先读一遍 `index.js`（约 400 行，只用 `node:crypto` / `node:fs` / `node:path` / `node:url`）。**
+
+#### `target` 接受的四种写法
+
+判定规则来自官方 `install-spec.js`，实测有效：
+
+| 形式 | 例子 | 备注 |
+|---|---|---|
+| **git 地址** | `https://github.com/DRQRTS/dsh`<br>`github:DRQRTS/dsh`<br>`git+https://github.com/DRQRTS/dsh.git` | 会先跑 `git ls-remote` 预检 |
+| **绝对路径** | `D:\SuperAI Power\dsh-repo`<br>`/home/me/dsh` | **必须绝对**；相对路径被拒 |
+| **tarball** | `...\local-dsh-cds-mode-1.5.0.tgz`<br>`https://.../x.tgz` | 本地或远程都行 |
+| **registry 包名** | `@drqrts/cds-mode@1.5.0` | 需已发布到 registry |
+
+`file:` 和 `link:` 前缀也认（`file:D:\path`、`link:D:\path`）。
+
+**被拒的写法**：相对路径（`./x`、`../x`）、非 git 非 tarball 的 URL（如 `https://github.com/DRQRTS` 少了仓库名）。
+
+### 方式 D：从压缩包（GitHub 不通时用这条）
+
+**第 1 步**，解压到一个**长期保留**的目录：
 
 ```bash
 mkdir -p ~/dsh-bundles
@@ -40,18 +103,15 @@ tar -xzf dsh-cds-mode-1.5.0.tgz -C ~/dsh-bundles
 ```
 
 > **`.zip` 与 `.tgz` 内容逐字节一致**，随便用哪个。
-> 注意：**DSH 的 `install_bundle` 不接受 `.zip` 本身** —— 它认 registry 包、git 地址、tarball、绝对路径。所以 zip 要先解压，再把解压出的 `package` 目录指给它。
-
+> **`install_bundle` 不接受 `.zip` 本身** —— 所以要先解压，再把解压出的目录指给它。
 > 为什么强调"长期保留"：安装用的是 `link:`（软链接）方式，DSH 会**指向**这个目录。目录没了，插件就加载失败。
 
-**第 2 步**，在一个 DSH 会话里，让 agent 执行：
+**第 2 步**，让 agent 从**绝对路径**安装：
 
 ```
 plugin_manager  action: install_bundle
-                target: /绝对路径/到/解压出的/package
+                target: D:\dsh-bundles\package
 ```
-
-`target` 必须是**绝对路径**。Windows 上形如 `C:\Users\你\dsh-bundles\package`。
 
 **第 3 步**，**重启 `dsh web`**。
 
@@ -65,21 +125,21 @@ dsh web
 
 **第 4 步**，**新建一个会话**，在预设里选「CDS 模式」。
 
-### 方式 B：从目录
-
-如果拿到的是解压好的目录，直接把 `target` 指向它，其余同上。
-
-### 方式 C：从 git
-
-```
-plugin_manager  action: install_bundle  target: <git 地址>
-```
-
-仓库里必须**包含 `cds/` 目录**（语料）。没有 `cds/` 的仓库装完会报「内置语料缺失」。
-
 ### 关于 npm registry
 
 本包声明为 `private: true`，不发布到 registry。若你 fork 后想发到自己的私有 registry，注意：**DSH 会校验 peer 依赖版本**，`@deepseek-ai/*` 的 peer 必须与目标 DSH 运行时版本一致，否则安装会被拒（且不会下载任何东西）。
+
+### 升级与卸载
+
+**插件不会自动更新。** 升级 = **先卸载，再装新版本**，然后重启。
+
+卸载：Web 的 Plugins 页找到卡片卸载，或
+
+```
+plugin_manager  action: remove_bundle  target: @local/dsh-cds-mode
+```
+
+**卸载不影响你的项目产物** —— 那些在你的项目工作区里。
 
 ---
 
@@ -200,11 +260,39 @@ C-WEB 只在你做安全任务时启用，不影响日常开发。它有一处**
 | 诊断说「内置语料缺失」 | 包不完整（缺 `cds/`） | 重新解压完整 tarball；或从 git 装时确认仓库含 `cds/` |
 | 诊断说「找不到语料」 | 你设了 `corpusDir` 但路径不对 | 按诊断里给出的实际目录核对，或删掉 `corpusDir` 用包内默认 |
 | 诊断说超 `maxChars` | 语料变大了 | 调大 `maxChars` |
+| 安装报 `Cannot access GitHub` | GitHub 不可达 | 见下面 6.1 |
+| 侧边栏没有 Plugins 页 | 该 profile 没有托管 | 改用方式 B（命令行）或 C（agent 工具） |
 | 模型说"我是 coding agent powered by…" | 选的是别的预设 | 确认会话预设是「CDS 模式」 |
 | 找不到任何协同入口 | 用的是「CDS 模式」（保底） | 换「CDS 模式 · 同伴频道版」 |
 | 有 `subagent` 但没有队友互聊 | 同上 | 换「CDS 模式 · 同伴频道版」 |
 | 重复 `install_bundle` 报 `ambiguous-install` | 同一目标已安装 | 正常，重启即可 |
+| 装了新版没变化 | 插件不自动更新 | 先卸载再装新版，然后重启（见第 7 节） |
 | 缓存命中率突然变低 | 语料被改过（前缀变了） | 看 `<包>/cds/CHANGELOG.md` 的缓存影响记录 |
+
+### 6.1 GitHub 不可达（中国大陆常见）
+
+**插件本身不需要联网**（零外部依赖、语料随包自带），但**方式 A / B / C 的 git 地址都要 clone GitHub**。
+
+**症状**：报 `Cannot access GitHub` 或 `GitHub connection timed out`；命令行里 `git ls-remote` 卡约 22 秒后失败，形如 `Failed to connect to github.com port 443`。
+
+**修法一：给 git 配代理**
+
+```bash
+git config --global http.proxy  http://127.0.0.1:7890
+git config --global https.proxy http://127.0.0.1:7890
+```
+
+端口换成你自己的，然后验证：
+
+```bash
+git ls-remote https://github.com/DRQRTS/dsh HEAD
+```
+
+能打印出一串 commit hash 就通了。
+
+**修法二：改用方式 D（压缩包）** —— 完全绕开 GitHub 和 registry。
+
+> **注意**：npm 的国内镜像（npmmirror）**解决不了这个问题**。它镜像的是 registry 上的包，不镜像 GitHub 仓库。所以「换镜像」对 git 地址无效 —— 这正是 Web 界面在你选镜像后会提示 `Try another way` 的原因。
 
 ---
 
@@ -218,8 +306,20 @@ plugin_manager  action: remove_bundle  target: <包名，如 @local/dsh-cds-mode
 
 卸载后预设卡片消失，系统提示恢复为部署默认。**你的项目产物不受影响**（它们在你的项目工作区里）。
 
-**升级**：解压新版本 → 对**同一 target 路径**执行 `install_bundle` → **重启**。
-若新旧目录不同，先卸载旧的再装新的，避免两个 bundle 同时挂载同名预设行而冲突。
+**升级**：**插件不会自动更新**，所以升级是「卸载旧的 → 装新的 → 重启」三步。
+
+```bash
+# 1) 卸载
+#    Web: Plugins 页找到 CDS 卡片 → 卸载
+#    或让 agent: plugin_manager action: remove_bundle target: @local/dsh-cds-mode
+
+# 2) 装新版本（按第 1 节任一方式）
+
+# 3) 重启
+dsh web
+```
+
+**别跳过卸载**：新旧目录不同却直接装，会让两个 bundle 同时挂载同名预设行而冲突。
 
 ---
 
@@ -228,7 +328,7 @@ plugin_manager  action: remove_bundle  target: <包名，如 @local/dsh-cds-mode
 **能保证的**：
 
 - **零外部依赖**：`index.js` 只 import `node:` 内建。不会因为某个包解析不到而在你机器上失效（这一条是踩过坑后定死的）。
-- **自带完整验证**：包内 `_verify3.mjs` 与 `_verify-corpus.mjs` 共 **130+ 项断言**，覆盖结构、接线、可移植性、真实装载。你可以自己跑：
+- **自带完整验证**：仓库里的 `_verify3.mjs` 与 `_verify-corpus.mjs` 共 **203 项断言**，覆盖结构、接线、可移植性、真实装载。你可以自己跑：
 
   ```bash
   node _verify3.mjs && node _verify-corpus.mjs
