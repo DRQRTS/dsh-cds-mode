@@ -6,6 +6,8 @@
 
 > **56 是怎么算的**：主模式 21 个（A/B/C/D/E 五组）+ 网络安全模式 35 个（八组）。两个模式各自还有一位"晨"——主模式的晨和它的安全模式版本。所以你实际会看到 **58 份人格卡**，但对你说话的自始至终只有一个。
 
+**语言：** [English](README.en.md) · **简体中文** · [日本語](README.ja.md)
+
 ---
 
 ## 一、这是什么
@@ -369,15 +371,17 @@ git ls-remote https://github.com/DRQRTS/dsh-cds-mode HEAD
 ## 十四、文件在哪
 
 ```
-dsh/                          ← GitHub 仓库根目录（也是 bundle 根目录）
-├── README.md                 ← 本文件（偏了解）
+dsh-cds-mode/                 ← GitHub 仓库根目录（也是 bundle 根目录）
+├── README.md                 ← 中文（默认，本文件）
+├── README.en.md              ← English
+├── README.ja.md              ← 日本語
 ├── INSTALL.md                ← 安装与故障排查（偏操作）
 ├── LICENSE                   ← MIT 许可证正文
 ├── package.json              ← 包定义：名称、版本、dsh.bundle.patch 指向
 ├── index.js                  ← 插件本体，约 400 行，零外部依赖
 ├── cordis.patch.yml          ← 预设与挂载配置（两个预设 + 同伴频道行）
-├── icon.svg
-├── locale/                   ← 中英文案
+├── icon.svg                  ← 图标（单色，跟随主题）
+├── locale/                   ← 界面上显示的名称与描述
 └── cds/                      ← 全部规范语料（90 个文件）
     ├── CORE.md                  运行契约：九条铁律、状态机、门禁、委任协议、编排纪律
     ├── README.md                模式总入口与人格总览
@@ -403,13 +407,19 @@ dsh/                          ← GitHub 仓库根目录（也是 bundle 根目�
 | `_verify-corpus.mjs` | 语料层校验：委任书要素、组特质一致性、死链 |
 | `_sync-corpus.mjs` | 语料同步（`--check` 只比对不写入） |
 | `_check-specs.mjs` | 验证各种安装写法能否被官方解析器接受 |
+| `_check-icon.mjs` | 校验图标 SVG：结构、几何、主题跟随 |
+| `_check-locale.mjs` | 按字节检查 locale JSON（防编码损坏） |
 | `_compare-extract.mjs` | 比对"解压产物 vs 源"是否逐字节一致 |
 | `_patch-reader.mjs` | 零依赖的 patch 结构读取器 |
 | `_zip.mjs` | 零依赖的 ZIP 写入器 |
 | `_pack.mjs` | 打包出 `.zip` 与 `.tgz` |
 
-你可以自己跑前两个（**共 203 项断言**）：
+你可以自己跑前两个（**共 228 项断言**）：
 
 ```bash
 node _verify3.mjs && node _verify-corpus.mjs
 ```
+
+---
+
+**语言：** [English](README.en.md) · **简体中文** · [日本語](README.ja.md)

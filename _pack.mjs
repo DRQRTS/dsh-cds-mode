@@ -103,6 +103,8 @@ if (files.length === 0) {
 // 真实 tarball 里核对。
 const MUST_HAVE = [
   'README.md',
+  'README.en.md',
+  'README.ja.md',
   'INSTALL.md',
   'LICENSE',
   'index.js',

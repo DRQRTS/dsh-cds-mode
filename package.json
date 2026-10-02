@@ -26,6 +26,7 @@
   },
   "files": [
     "README.md",
+    "README.*.md",
     "INSTALL.md",
     "LICENSE",
     "package.json",

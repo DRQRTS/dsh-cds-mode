@@ -290,6 +290,83 @@ console.log('=== B6. 公开文档（分发包的 README / INSTALL）===')
   }
 }
 
+// ── B7. 多语言与图标 ────────────────────────────────────────────────────────
+console.log('')
+console.log('=== B7. 多语言与图标 ===')
+{
+  const LANGS = ['README.md', 'README.en.md', 'README.ja.md']
+  for (const f of LANGS) check(existsSync(join(PACKAGE_DIR, f)), '存在 ' + f)
+
+  // 三份都要有语言导航，且各自把自己标成当前语言
+  const nav = {
+    'README.md': '**简体中文**',
+    'README.en.md': '**English**',
+    'README.ja.md': '**日本語**',
+  }
+  for (const [f, self] of Object.entries(nav)) {
+    if (!existsSync(join(PACKAGE_DIR, f))) continue
+    const t = readFileSync(join(PACKAGE_DIR, f), 'utf8')
+    check(t.includes(self), f + ' 把自己标为当前语言（' + self + '）')
+    const others = LANGS.filter((x) => x !== f)
+    check(others.every((o) => t.includes(o)), f + ' 链接到另外两份 README')
+  }
+
+  // 三份的章节数必须一致（翻译同步，不能漏节）
+  const counts = {}
+  for (const f of LANGS) {
+    if (!existsSync(join(PACKAGE_DIR, f))) continue
+    const t = readFileSync(join(PACKAGE_DIR, f), 'utf8')
+    counts[f] = (t.match(/^## /gm) || []).length
+  }
+  const vals = Object.values(counts)
+  check(vals.every((v) => v === vals[0]), '三份 README 章节数一致（' + JSON.stringify(counts) + '）')
+
+  // 三份都必须含关键事实（防止翻译时漏掉硬信息）
+  const facts = [
+    ['dsh plugin --profile', '安装命令'],
+    ['install_bundle', 'agent 工具安装'],
+    ['228', '断言数'],
+    ['0.2.0-rc.2', 'DSH 目标版本'],
+  ]
+  for (const f of LANGS) {
+    if (!existsSync(join(PACKAGE_DIR, f))) continue
+    const t = readFileSync(join(PACKAGE_DIR, f), 'utf8')
+    for (const [needle, label] of facts) {
+      check(t.includes(needle), f + ' 含' + label)
+    }
+  }
+
+  // 图标
+  const iconPath = join(PACKAGE_DIR, 'icon.svg')
+  check(existsSync(iconPath), '存在 icon.svg')
+  if (existsSync(iconPath)) {
+    const svg = readFileSync(iconPath, 'utf8')
+    check(/^<svg[\s>]/.test(svg.trim()), 'icon.svg 根元素正确')
+    check(svg.includes('xmlns='), 'icon.svg 声明 xmlns')
+    check(svg.includes('viewBox='), 'icon.svg 有 viewBox')
+    check(svg.includes('currentColor'), 'icon.svg 用 currentColor 跟随主题')
+    check(!/#[0-9a-fA-F]{3,6}/.test(svg), 'icon.svg 无硬编码颜色')
+    check(/role="img"/.test(svg) && /aria-label=/.test(svg), 'icon.svg 有无障碍属性')
+    check(/<\/svg>\s*$/.test(svg), 'icon.svg 闭合完整')
+  }
+
+  // locale 必须是有效 UTF-8 JSON，且中文文件里确实有汉字（防编码损坏）
+  for (const f of ['locale/zh.json', 'locale/en.json']) {
+    const p = join(PACKAGE_DIR, f)
+    if (!existsSync(p)) { check(false, '缺 ' + f); continue }
+    const bytes = readFileSync(p)
+    let parsed = null
+    try { parsed = JSON.parse(bytes.toString('utf8')) } catch { /* handled below */ }
+    check(parsed !== null, f + ' 是有效 JSON')
+    check(!bytes.includes(Buffer.from('\r\n')), f + ' 是 LF')
+    check(!(bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf), f + ' 无 BOM')
+    if (f === 'locale/zh.json') {
+      const cjk = (bytes.toString('utf8').match(/[\u4e00-\u9fff]/g) || []).length
+      check(cjk > 10, 'locale/zh.json 含汉字（' + cjk + ' 个，防编码损坏）')
+    }
+  }
+}
+
 // ── C. 源码契约 ─────────────────────────────────────────────────────────────
 console.log('')
 console.log('=== C. 插件源码契约 ===')
