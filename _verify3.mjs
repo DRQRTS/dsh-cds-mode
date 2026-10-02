@@ -336,6 +336,16 @@ console.log('=== B7. 多语言与图标 ===')
     }
   }
 
+  // README 里引用的图片必须真的在包内，否则装完之后文档里的图会裂
+  for (const f of LANGS) {
+    if (!existsSync(join(PACKAGE_DIR, f))) continue
+    const t = readFileSync(join(PACKAGE_DIR, f), 'utf8')
+    const refs = [...t.matchAll(/(?:srcset|src)="([^"]+\.(?:png|svg))"/g)].map((m) => m[1])
+    check(refs.length > 0, f + ' 引用了图标（' + refs.length + ' 处）')
+    const missing = refs.filter((r) => !existsSync(join(PACKAGE_DIR, r)))
+    check(missing.length === 0, f + ' 引用的图片全部存在' + (missing.length ? ' → 缺: ' + missing.join(', ') : ''))
+  }
+
   // 图标
   const iconPath = join(PACKAGE_DIR, 'icon.svg')
   check(existsSync(iconPath), '存在 icon.svg')

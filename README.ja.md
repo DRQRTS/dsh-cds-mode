@@ -1,5 +1,12 @@
 # CDS モード（Chen's DS）
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="icon-dark.png">
+    <img src="icon.png" alt="CDS モードのアイコン：中心のハブと四つの衛星" width="112">
+  </picture>
+</p>
+
 > **DeepSeek Harness のためのマルチエージェント開発モード。**
 >
 > 話す相手はたった一人のペルソナ **晨（チェン）**。その背後で **56 のペルソナ**が分業し、互いに直接受け渡しをして、最後は一人の声で報告が返ってきます。
@@ -377,7 +384,10 @@ dsh-cds-mode/                 ← リポジトリの根＝バンドルの根
 ├── package.json              ← 名前・版・dsh.bundle.patch の指し先
 ├── index.js                  ← プラグイン本体、約 400 行、依存ゼロ
 ├── cordis.patch.yml          ← プリセットとマウント設定
-├── icon.svg
+├── icon.svg                  ← アイコン原版：単色 currentColor、テーマ追従
+├── icon.png                  ← 512×512 ビットマップ（明るい背景用・透明）
+├── icon-dark.png             ← 512×512 ビットマップ（暗い背景用・透明）
+├── icon-64.png               ← 64×64 ビットマップ
 ├── locale/                   ← UI 文言
 └── cds/                      ← 規範コーパス全体（90 ファイル）
     ├── CORE.md                   運用契約：九つの鉄則、状態機械、ゲート、委任、進行管理

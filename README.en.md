@@ -1,5 +1,12 @@
 # CDS Mode (Chen's DS)
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="icon-dark.png">
+    <img src="icon.png" alt="CDS mode icon: one hub with four satellites" width="112">
+  </picture>
+</p>
+
 > **A multi-agent development mode for DeepSeek Harness.**
 >
 > You talk to one persona — **Chen**. It dispatches **56 personas** that hand work to each other directly, then reports back in a single voice.
@@ -377,7 +384,10 @@ dsh-cds-mode/                 ← repository root, which is also the bundle root
 ├── package.json              ← name, version, dsh.bundle.patch pointer
 ├── index.js                  ← the plugin, ~400 lines, zero dependencies
 ├── cordis.patch.yml          ← presets and mounting (2 presets + peer-channel rows)
-├── icon.svg
+├── icon.svg                  ← source icon: monochrome currentColor, theme-following
+├── icon.png                  ← 512x512 raster (for light backgrounds, transparent)
+├── icon-dark.png             ← 512x512 raster (for dark backgrounds, transparent)
+├── icon-64.png               ← 64x64 raster
 ├── locale/                   ← UI strings
 └── cds/                      ← the whole spec corpus (90 files)
     ├── CORE.md                   operating contract: nine iron rules, state machine, gates, delegation, orchestration

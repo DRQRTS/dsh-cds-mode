@@ -1,5 +1,12 @@
 # CDS 模式（Chen's DS）
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="icon-dark.png">
+    <img src="icon.png" alt="CDS 模式图标：一个枢纽带四颗卫星" width="112">
+  </picture>
+</p>
+
 > **一个把「多智能体协作」真正跑起来的工作模式，装进 DeepSeek Harness。**
 >
 > 你和唯一的主人格**晨**对话。它带着 **56 个人格**分头干活，互相直接交接，最后把结果交回你手上。
@@ -380,7 +387,10 @@ dsh-cds-mode/                 ← GitHub 仓库根目录（也是 bundle 根目�
 ├── package.json              ← 包定义：名称、版本、dsh.bundle.patch 指向
 ├── index.js                  ← 插件本体，约 400 行，零外部依赖
 ├── cordis.patch.yml          ← 预设与挂载配置（两个预设 + 同伴频道行）
-├── icon.svg                  ← 图标（单色，跟随主题）
+├── icon.svg                  ← 图标源文件：单色 currentColor，跟随主题
+├── icon.png                  ← 图标位图 512×512（浅底用，透明背景）
+├── icon-dark.png             ← 图标位图 512×512（深底用，透明背景）
+├── icon-64.png               ← 图标位图 64×64
 ├── locale/                   ← 界面上显示的名称与描述
 └── cds/                      ← 全部规范语料（90 个文件）
     ├── CORE.md                  运行契约：九条铁律、状态机、门禁、委任协议、编排纪律
