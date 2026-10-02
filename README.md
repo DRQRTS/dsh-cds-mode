@@ -372,6 +372,7 @@ git ls-remote https://github.com/DRQRTS/dsh-cds-mode HEAD
 dsh/                          ← GitHub 仓库根目录（也是 bundle 根目录）
 ├── README.md                 ← 本文件（偏了解）
 ├── INSTALL.md                ← 安装与故障排查（偏操作）
+├── LICENSE                   ← MIT 许可证正文
 ├── package.json              ← 包定义：名称、版本、dsh.bundle.patch 指向
 ├── index.js                  ← 插件本体，约 400 行，零外部依赖
 ├── cordis.patch.yml          ← 预设与挂载配置（两个预设 + 同伴频道行）
