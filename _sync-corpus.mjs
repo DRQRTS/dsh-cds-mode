@@ -27,12 +27,36 @@ const SRC = fromFlag !== -1 && argv[fromFlag + 1] !== undefined
 
 const CHECK_ONLY = argv.includes('--check')
 
-/** Every file under `dir`, as paths relative to `dir`, sorted. */
+/**
+ * Authoring-only files that must NOT ship in the bundle.
+ *
+ * The corpus is developed in the workspace, where it also holds documents that
+ * are for the maintainer, not for users. A full copy would carry them into the
+ * published package and the tarball. Excluding here (rather than deleting the
+ * source) keeps the authoring material intact while keeping the bundle clean.
+ *
+ * Paths are relative to the corpus root.
+ */
+const EXCLUDE = [
+  // Internal defect assessment: names the mode's own flaws, how they were
+  // graded, and what was deferred. Useful while maintaining; noise (and a
+  // false impression of instability) for a reader installing the mode.
+  'ASSESSMENT-v1.7.md'
+]
+
+/** Is `rel` excluded from the shipped corpus? Matches the path or any parent dir. */
+function isExcluded(rel) {
+  return EXCLUDE.some((e) => rel === e || rel.startsWith(e + '/'))
+}
+
+/** Every shipped file under `dir`, as paths relative to `dir`, sorted. */
 function listFiles(dir, base = dir, out = []) {
   for (const name of readdirSync(dir).sort()) {
     const full = join(dir, name)
+    const rel = relative(base, full).split('\\').join('/')
+    if (isExcluded(rel)) continue
     if (statSync(full).isDirectory()) listFiles(full, base, out)
-    else out.push(relative(base, full).split('\\').join('/'))
+    else out.push(rel)
   }
   return out
 }
@@ -69,14 +93,19 @@ if (CHECK_ONLY) {
 }
 
 // Copy: wipe first so a renamed/deleted source file cannot linger as a stale
-// extra file in the package.
+// extra file in the package. Copy file-by-file (not `cpSync`, which would
+// replicate excluded files that `listFiles` then hides — the exclusion would
+// look correct in the count while the file still sits on disk).
 if (existsSync(DEST)) rmSync(DEST, { recursive: true, force: true })
-mkdirSync(DEST, { recursive: true })
-cpSync(SRC, DEST, { recursive: true })
+for (const rel of srcFiles) {
+  const to = join(DEST, rel)
+  mkdirSync(dirname(to), { recursive: true })
+  cpSync(join(SRC, rel), to)
+}
 
 const destFiles = listFiles(DEST)
 const bytes = destFiles.reduce((n, f) => n + statSync(join(DEST, f)).size, 0)
-console.log(`[sync-corpus] 已同步 ${destFiles.length} 个文件 / ${(bytes / 1024).toFixed(0)} KB`)
+console.log(`[sync-corpus] 已同步 ${destFiles.length} 个文件 / ${(bytes / 1024).toFixed(0)} KB（排除 ${EXCLUDE.length} 项内部文件）`)
 console.log(`  源  : ${SRC}`)
 console.log(`  目标: ${DEST}`)
 if (destFiles.length !== srcFiles.length) {

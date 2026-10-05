@@ -20,7 +20,9 @@ const raw = readFileSync(DIR + 'cordis.patch.yml', 'utf8')
 const src = readFileSync(DIR + 'index.js', 'utf8')
 
 let fail = 0
+let total = 0
 const check = (ok, label) => {
+  total++
   if (!ok) fail++
   console.log('  ' + (ok ? 'PASS' : 'FAIL') + '  ' + label)
 }
@@ -62,6 +64,7 @@ check(personaInjected.length === 0, '委任书未混入 INJECTED' + (personaInje
 const onDisk = [...PERSONA_FILES, 'chen.md'].filter((f) => existsSync(CORPUS + 'personas/' + f))
 check(onDisk.length === PERSONA_FILES.length + 1, '磁盘上存在 ' + (PERSONA_FILES.length + 1) + ' 份主模式人格文件（实际 ' + onDisk.length + '）')
 check((onDemand ?? []).includes('questions/99-adaptive-asking.md'), 'ON_DEMAND 含提问总纲')
+check(/role_load/.test(src), '裁定文本含 role_load 装载方式字段')
 check(/role_text/.test(src), '裁定文本含 role_text 委任要求')
 check(/ask_user_question/.test(src), '裁定文本含 ask_user_question 硬约束')
 
@@ -73,6 +76,7 @@ check(!src.includes('A/B/C/D 组一律单实例'), '旧规则「A/B/C/D 组一�
 check(src.includes('并发是默认') && src.includes('禁止串行'), '含「并发是默认，禁止串行」')
 check(src.includes('slice'), '含 slice 互斥切片声明')
 check(/上限 \*\*8\*\*/.test(src), '含同批并发上限 8')
+check(!src.includes('串行四步'), '旧表述「串行四步」已移除（TRIAGE 改三步两批）')
 check(src.includes('只有 E1 能创建带编号的下属'), 'E1 例外表述正确')
 check(src.includes('不许抢活'), '含「晨不许抢活」裁定')
 check(src.includes('产物作废'), '含抢活判据（产物作废）')
@@ -284,7 +288,7 @@ console.log('=== B6. 公开文档（分发包的 README / INSTALL）===')
     check(/install_bundle/.test(im), 'INSTALL 写了 agent 工具安装')
     check(/6\.1/.test(im), 'INSTALL 写了 GitHub 不可达小节')
     check(/不会自动更新|不自动更新/.test(im), 'INSTALL 说明插件不自动更新')
-    check(!/130\+ 项断言/.test(im), 'INSTALL 的断言数已更新（不再是 130+）')
+    check(!/\d{2,4}\s*项断言/.test(im), 'INSTALL 未内联断言数（应引用脚本输出）')
     check(/DRQRTS\/dsh-cds-mode/.test(im), 'INSTALL 用规范仓库名')
     check(!/DRQRTS\/dsh(?!-cds-mode)/.test(im), 'INSTALL 无旧仓库地址残留')
   }
@@ -325,7 +329,6 @@ console.log('=== B7. 多语言与图标 ===')
   const facts = [
     ['dsh plugin --profile', '安装命令'],
     ['install_bundle', 'agent 工具安装'],
-    ['228', '断言数'],
     ['0.2.0-rc.2', 'DSH 目标版本'],
   ]
   for (const f of LANGS) {
@@ -334,6 +337,12 @@ console.log('=== B7. 多语言与图标 ===')
     for (const [needle, label] of facts) {
       check(t.includes(needle), f + ' 含' + label)
     }
+    // 反向断言：README 不得内联「N 项断言」这类具体数字。
+    // 真实数字由脚本运行结束时输出（见文件末尾「断言数：」行），
+    // 文档里手填的数字必然随时间漂移——历史上这里同时出现过
+    // 203 / 228 / 265 / 166 四个互不相同的数字，没有一个等于真实值。
+    const inlined = t.match(/\d{2,4}\s*(?:项断言|assertions|項目のアサーション)/)
+    check(inlined === null, f + ' 未内联断言数（应引用脚本输出，实际' + (inlined ? '含 ' + inlined[0] : '无') + '）')
   }
 
   // README 里引用的图片必须真的在包内，否则装完之后文档里的图会裂
@@ -379,6 +388,29 @@ console.log('=== B7. 多语言与图标 ===')
 
 // ── C. 源码契约 ─────────────────────────────────────────────────────────────
 console.log('')
+console.log('=== B8. 发布元数据一致性 ===')
+// 官方要求：组合包 manifest 必须声明 dsh.bundle.patch；分发走 npm / tarball。
+// 这一节把「发出去的东西」与「CHANGELOG 里写的版本」绑在一起 ——
+// 曾经 v1.6.0 / v1.7.0 的修订都落进了语料 CHANGELOG，但 package.json 一直停在
+// 1.5.1，没有任何检查盯着这处漂移。现在盯上了。
+const pkg = JSON.parse(readFileSync(DIR + 'package.json', 'utf8'))
+check(pkg.dsh !== undefined && pkg.dsh.bundle !== undefined && typeof pkg.dsh.bundle.patch === 'string',
+  'package.json 声明 dsh.bundle.patch（官方组合包 manifest）')
+check(pkg.dsh.bundle.patch === './cordis.patch.yml', 'dsh.bundle.patch 指向 ./cordis.patch.yml')
+check(pkg.files.includes('index.js') && pkg.files.includes('cordis.patch.yml'),
+  'files 含 index.js 与 cordis.patch.yml（官方最小文件集）')
+check(pkg.type === 'module', 'package.json type = module')
+check(pkg.license === 'MIT', 'license = MIT')
+check(typeof pkg.repository?.url === 'string' && pkg.repository.url.includes('github.com'),
+  'repository.url 指向 GitHub（开源元数据）')
+check(pkg.files.includes('cds/CHANGELOG.md'), 'files 显式列出 cds/CHANGELOG.md')
+// 版本与语料 CHANGELOG 顶条一致（防「改了语料忘了升版本」）。
+const cl = readFileSync(DIR + 'cds/CHANGELOG.md', 'utf8')
+const topVer = (cl.match(/^## v([\d.]+)/m) || [])[1]
+check(topVer === pkg.version, `package.json 版本与 CHANGELOG 顶条一致（pkg ${pkg.version} / CHANGELOG ${topVer}）`)
+// 内部文件不得进包。
+check(!existsSync(DIR + 'cds/ASSESSMENT-v1.7.md'), '内部评估文件不在包内')
+
 console.log('=== C. 插件源码契约 ===')
 // 语法检查用动态 import 做（不是 `new Function` —— 那个不能解析 ESM 的 import，
 // 会一律报错）。曾经踩过：在 RULINGS 模板字面量里写了未转义的反引号，直接把
@@ -417,7 +449,7 @@ const mount = (o) => {
     systemPrompt: { section(s) { cap.section = s; return () => {} } },
     logger: { info: (m) => logs.push('INFO ' + m), warn: (m) => logs.push('WARN ' + m) },
   }
-  mod.apply(ctx, Object.assign({ maxChars: 200000, liveReload: false }, o))
+  mod.apply(ctx, Object.assign({ maxChars: 200000 }, o))
   return { section: cap.section, logs, dispose: cap.dispose }
 }
 const a = mount({})
@@ -431,13 +463,47 @@ const notInPrompt = (injected ?? []).filter((p) => !a.section.text.includes(p))
 check(notInPrompt.length === 0, 'INJECTED 全部进了提示词' + (notInPrompt.length ? ' → 缺: ' + notInPrompt.join(', ') : ''))
 const leaked = (onDemand ?? []).filter((p) => p.startsWith('personas/') && a.section.text.includes('### 语料：' + p))
 check(leaked.length === 0, '按需委任书未泄漏进提示词' + (leaked.length ? ' → ' + leaked.join(', ') : ''))
-check([1,2,3,4,5,6,7,8,9,10].every((n) => a.section.text.includes('裁定 ' + n)), '含十条裁定')
+check([1,2,3,4,5,6,7,8,9,10,11].every((n) => a.section.text.includes('裁定 ' + n)), '含十一条裁定（装载后的文本，非源码）')
 check(a.section.text.includes('L8') && a.section.text.includes('L9'), '提示词含铁律 L8 / L9')
 check(a.section.text.includes('角色委任协议'), '提示词含角色委任协议')
 check(a.section.text.includes('role_text'), '提示词含 role_text 字段要求')
+check(a.section.text.includes('role_ref') && a.section.text.includes('role_load'), '提示词含 role_ref / role_load 字段要求')
+check(a.section.text.includes('规则 6.3.7 · 分批规则'), '提示词含 6.3.7 分批规则')
+check(!a.section.text.includes('串行四步'), '提示词已移除「串行四步」（TRIAGE 改三步两批）')
+check(a.section.text.includes('频道自检') && a.section.text.includes('轮末'), '提示词含"频道自检（轮末）"')
 check(a.section.text.includes('题库是素材，不是脚本'), '提示词含「题库是素材不是脚本」')
+check(a.section.text.includes('复验门禁（D4 闭环）'), '提示词含「复验门禁（D4 闭环）」')
+check(a.section.text.includes('回 D4 复验'), '提示词含治理权闭环「回 D4 复验」')
+check(a.section.text.includes('AI 味项的关闭权归 D4'), '提示词含「AI 味项关闭权归 D4」')
+check(a.section.text.includes('升级 D6 仲裁'), '提示词含复验未达标「升级 D6 仲裁」')
+check(a.section.text.includes('放行清单（Release Checklist）'), '提示词含放行清单（release-checklist 已进静态层）')
+check(a.section.text.includes('任一项未勾，不得进 DONE') || a.section.text.includes('任一未勾不得进 DONE'), '提示词含放行清单硬门禁语义')
+check(a.section.text.includes('指不到，就是没勾'), '提示词含放行清单可判定判据')
+check(a.section.text.includes('放行清单') && a.section.text.includes('同时满足才进 DONE'), '提示词含放行清单与收敛判据的区分')
+// 静态层顺序是缓存前缀的一部分：release-checklist 必须紧跟 bug-taxonomy 之后、cache-economy 之前
+const iBt = a.section.text.indexOf('五级分类法（S1–S5）')
+const iRc = a.section.text.indexOf('放行清单（Release Checklist）')
+const iCe = a.section.text.indexOf('前缀稳定化与思维链控制')
+check(iBt >= 0 && iRc >= 0 && iCe >= 0, '三个协议段都进了提示词')
+check(iBt < iRc && iRc < iCe, 'release-checklist 插在 bug-taxonomy 与 cache-economy 之间（前缀顺序稳定）')
+// 计数文案防漂：index.js 的 MODE_README 声明「已注入的 N 份」必须等于 INJECTED 实际条数。
+// 这条例行在 v1.5.0 就漂过（写 11、实际 12），v1.7.0 加文件时又漂一次（写 12、实际 13）——改成动态比对。
+const srcIdx = readFileSync(DIR + 'index.js', 'utf8')
+const injBlock = srcIdx.match(/const INJECTED = \[([\s\S]*?)\n\]/)
+const injCount = injBlock ? (injBlock[1].match(/^\s*\['/gm) || []).length : -1
+const claimMatch = srcIdx.match(/已注入的\s*(\d+)\s*份/)
+const claimCount = claimMatch ? Number(claimMatch[1]) : -1
+check(injCount > 0 && claimCount === injCount, `「已注入的 N 份」与实际 INJECTED 条数一致（声明 ${claimCount} / 实际 ${injCount}）`)
 check(a.section.text.includes('99-adaptive-asking.md'), '提示词指向提问总纲')
 check(mount({}).section.text === a.section.text, '两次装载逐字节一致（缓存前缀稳定）')
+
+// 跨环境确定性：section 文本里不得含任何本机绝对路径。
+// 绝对路径随机器/安装位置变化，会让同一份语料在不同环境下产生不同的缓存前缀
+// —— 这正是本插件要防的事。此断言同时能抓住「把 relPath 手工转成 Windows
+// 反斜杠」这类缺陷（在 Windows 上 join 恰好等价，测不出来；但绝对路径会露馅）。
+// 匹配盘符路径（D:\ 或 D:/）与 POSIX 绝对路径（/home、/Users、/root、/pkg 下的 file:// 形式）。
+const ABS_PATH = /(?:^|[\s`(])[A-Za-z]:[\\/]|(?:\/home\/|\/Users\/|\/root\/)/
+check(!ABS_PATH.test(a.section.text), 'section 文本不含任何本机绝对路径（跨环境前缀确定）')
 
 // ── E. 故障模式 ─────────────────────────────────────────────────────────────
 console.log('')
@@ -454,5 +520,7 @@ a.dispose()
 check(true, 'disposer 可调用')
 
 console.log('')
+// 这一行是断言数的唯一权威来源。文档里的数字一律引用它，不要手填。
+console.log('断言数：' + total + '（通过 ' + (total - fail) + '，失败 ' + fail + '）')
 console.log(fail === 0 ? '全部通过' : fail + ' 条失败')
 if (fail !== 0) process.exitCode = 1

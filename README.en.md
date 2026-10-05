@@ -336,7 +336,7 @@ A commit hash means it works.
 **What is guaranteed**
 
 - **Zero external dependencies**: `index.js` imports only `node:` built-ins. It cannot break on your machine because some package fails to resolve (this was fixed after hitting exactly that).
-- **Verification ships with it**: 228 assertions across two scripts, covering structure, wiring, portability and real mounting. You can run them yourself:
+- **Verification ships with it**: two verification scripts covering structure, wiring, portability and real mounting. **Take the assertion count from what the scripts print** (each ends with `断言数：N`) — the docs deliberately hard-code no number, so it cannot drift from reality. You can run them yourself:
 
   ```bash
   node _verify3.mjs && node _verify-corpus.mjs
@@ -350,7 +350,7 @@ A commit hash means it works.
 - **同伴频道版 depends on two experimental packages** (`dsh-experimental-agent-team` / `dsh-experimental-tool-agent-team`) plus an experimental UI package. They carry **no stability promise**; a breaking upstream change could stop that card from activating. **This does not affect CDS 模式** (the baseline card).
 - **Batch concurrency is capped at 8 instances.** Deliberate, not a defect.
 - Built against DSH `0.2.0-rc.2`. **Before moving to a new major DSH version, run the verification scripts above.**
-- **Four surfaces have not been verified end-to-end in a real session**: the preset cards not being red, sub-agent role-play, questions going through the tool, and the collaboration UI with teammates messaging each other. The 228 assertions cover "the wiring is right, the corpus is complete, it mounts" — **not "it works well in practice."** For a first run, do the three steps in section 9.
+- **Four surfaces have not been verified end-to-end in a real session**: the preset cards not being red, sub-agent role-play, questions going through the tool, and the collaboration UI with teammates messaging each other. The assertions cover "the wiring is right, the corpus is complete, it mounts" — **not "it works well in practice."** For a first run, do the three steps in section 9.
 
 **On the security mode's boundaries**
 
@@ -421,7 +421,7 @@ The repository also carries a few development and verification files. **They are
 | `_zip.mjs` | dependency-free ZIP writer |
 | `_pack.mjs` | builds the `.zip` and `.tgz` |
 
-You can run the first two yourself (**228 assertions**):
+You can run the first two yourself (the assertion count is whatever the scripts print):
 
 ```bash
 node _verify3.mjs && node _verify-corpus.mjs

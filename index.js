@@ -11,7 +11,13 @@
  *     so the rendered system prompt stays byte-identical across turns and the
  *     provider prefix cache keeps hitting.
  *   - Corpus changes are detected at activation and reported in the digest.
- *     `liveReload` is opt-in precisely because reloading changes the prefix.
+ *     The corpus is read ONCE, at activation; there is no hot reload, because
+ *     reloading would rewrite the prefix and drop the cache.
+ *
+ *   - Paths into the corpus are rendered RELATIVE (see `listOf`). Absolute
+ *     paths would make the rendered text depend on the host and install
+ *     location, so the prefix would differ across machines even for an
+ *     identical corpus — the very thing this contract exists to prevent.
  *
  * Authority: the corpus files remain the single source of truth. This plugin
  * never copies their content into source form.
@@ -67,6 +73,7 @@ const INJECTED = [
   ['protocol/peer-channel.md', '子 Agent 直连协同协议（人格之间直接对话，不经晨传话）'],
   ['protocol/artifacts.md', '产物契约：责任矩阵、命名规范、front-matter、生命周期'],
   ['protocol/bug-taxonomy.md', '五级分类法（S1–S5）+ 类型分类法（9 大类 + 回归类）'],
+  ['protocol/release-checklist.md', '放行清单：DONE 门禁的七条硬勾选项（未勾不得交付）'],
   ['selfrescue/cache-economy.md', '自救模式·省钱部分：前缀稳定化与思维链控制']
 ]
 
@@ -82,7 +89,7 @@ const INJECTED = [
 const ON_DEMAND = [
   ['README.md', '模式总入口、人格总览表'],
 
-  // ── 人格委任书：派发时按编号取一份，全文传给子 Agent ──
+  // ── 人格委任书：派发时按编号取一份，用 role_ref 装载（role_load: static|inline）──
   ['personas/A1-官方派调查者.md', 'A1 委任书：官方资料，批判并实测民间说法'],
   ['personas/A2-复用派调查者.md', 'A2 委任书：已有技术复用；主导接手项目的代码逆向盘点'],
   ['personas/A3-个性化派调查者.md', 'A3 委任书：去 AI 味、反千篇一律'],
@@ -179,7 +186,7 @@ const ON_DEMAND = [
  */
 const RULINGS = `## 三、DSH 运行裁定（本插件对规范的十一条收口）
 
-规范写在语料库里，**语料库不因运行环境改写**。以下十条是把规范落到实际运行时上的裁定；与语料库冲突时以本节为准。
+规范写在语料库里，**语料库不因运行环境改写**。以下十一条是把规范落到实际运行时上的裁定；与语料库冲突时以本节为准。
 
 **裁定 1 · 并发是默认，禁止串行；只有 E1 能创建带编号的下属。**
 - **同一人格编号可以同时存在多个实例**，没有"一人格一实例"的限制。早先 CORE 第二节曾写成"只允许一个活跃实例"，那与工作流里的「A1–A3 并行」「D1–D5 并行」「B1/B2/B3 并行」直接矛盾，**已在 CORE 里改正**（允许并发、禁止串行）。
@@ -233,9 +240,9 @@ const RULINGS = `## 三、DSH 运行裁定（本插件对规范的十一条收�
 | 多个人格并行 | \`workflow\` 脚本（\`agent()\` / \`pipeline()\` / \`parallel()\`） |
 | 门禁未过 → 拒收 | 该人格回复一条 \`## MSG ... kind: reject\`，直接写进上游 inbox，**不经晨** |
 
-**裁定 6 · 注入的是索引与契约，不是全部人格卡。** 已注入的 11 份（含 \`chen.md\` 与五份组索引）**不要重复读取**。**21 份人格委任书不在注入范围内**——它们按需读取，每次派发只读**那一份**（见裁定 2）。任何人格都**不得把注入内容复制到产物里**，只引用路径。
+**裁定 6 · 注入的是索引与契约，不是全部人格卡。** 已注入的 13 份（含 \`chen.md\`、五份组索引与 C-WEB 组索引）**不要重复读取**。**21 份人格委任书不在注入范围内**——它们按需读取，每次派发只读**那一份**（见裁定 2）。任何人格都**不得把注入内容复制到产物里**，只引用路径。
 
-**裁定 7 · 省钱条款是可执行的硬约束，不是口号。** 前缀稳定、只传路径、同一人格复用会话、不搬运全文 —— 违反即按 \`cache-economy.md\` 第六节处理。若发现自己在反复搬运同一份长文件，立刻停下来改成引用路径。
+**裁定 7 · 省钱条款是可执行的硬约束，不是口号。** 前缀稳定、只传路径、同一人格复用会话、不搬运全文 —— 违反即按 \`protocol/peer-channel.md\` 第六节「违规处理」表处置（该表写明每条违规的判定与后果，如「在 payload 里贴全文 → 收件人拒收，要求改传路径」）。若发现自己在反复搬运同一份长文件，立刻停下来改成引用路径。
 
 > **注意**：委任书正文（约 2–3k 字符）是**必须付的成本**。省掉它换来的是一个不知道自己是谁的子 Agent。同一人格多轮复用同一段委任书，前缀稳定，缓存仍然命中。
 
@@ -274,7 +281,7 @@ const RULINGS = `## 三、DSH 运行裁定（本插件对规范的十一条收�
 2. **D-web1 策略门不可绕过**：任何 Agent（**包括晨**）都不得跳过。判定只有三种结果 —— 允许 / 需审批 / 拒绝，**没有第四种**。"先做后补"不是结果，是违规。
 3. **越界即停是字面意思**：不只是"范围外的目标"，**范围判定的依据变化时也要停**（如目标 IP 归属变为共享出口）。
 
-其余铁律照常生效（L1 唯一对外、L3 不藏 bug、L7 必须落盘、L8 委任必须交出人格卡正文）。**36 份 C-WEB 委任书**在 \`personas/web/\`，索引见 \`web/00-组索引.md\`。\`I-web5\`（反击执行）有"绝对不做"清单 —— **授权可以扩大允许做什么，但不能把犯罪行为变成合法行为。**
+其余铁律照常生效（L1 唯一对外、L3 不藏 bug、L7 必须落盘、L8 委任必须锚定人格卡且卡片必须真正被装载）。**36 份 C-WEB 委任书**在 \`personas/web/\`，索引见 \`web/00-组索引.md\`。\`I-web5\`（反击执行）有"绝对不做"清单 —— **授权可以扩大允许做什么，但不能把犯罪行为变成合法行为。**
 
 ---
 
@@ -296,7 +303,12 @@ function normalizeText(raw, relPath) {
 }
 
 function readCorpusFile(corpusDir, relPath) {
-  const absolute = join(corpusDir, relPath.split('/').join('\\'))
+  // `path.join` already normalises separators for the host platform. Do NOT
+  // rewrite `/` to `\` by hand: on POSIX a backslash is an ordinary filename
+  // character, so `join('/pkg/cds', 'personas\A1.md')` resolves to a literal
+  // name containing `\` and readFileSync fails with ENOENT — the whole preset
+  // then reads「加载失败」. Keep the specifier POSIX-style and let join() adapt.
+  const absolute = join(corpusDir, relPath)
   let raw
   try {
     raw = readFileSync(absolute, 'utf8')
@@ -315,10 +327,18 @@ function shortHash(text) {
   return createHash('sha256').update(text, 'utf8').digest('hex').slice(0, 12)
 }
 
-function listOf(rows, corpusDir) {
-  return rows
-    .map(([rel, purpose]) => `- \`${join(corpusDir, rel.split('/').join('\\'))}\` — ${purpose}`)
-    .join('\n')
+/**
+ * Render the on-demand list with paths RELATIVE to `corpusDir`, never absolute.
+ *
+ * Absolute paths are host-specific: the same corpus loaded on two machines
+ * would produce different section text, so the cache prefix would miss across
+ * environments — exactly what this plugin exists to prevent. Relative paths are
+ * also what the reading discipline tells the agent to use ("只引用路径"), and
+ * they stay portable if the agent quotes one into an artifact. The corpus root
+ * is stated once in the section header instead.
+ */
+function listOf(rows) {
+  return rows.map(([rel, purpose]) => `- \`cds/${rel}\` — ${purpose}`).join('\n')
 }
 
 /**
@@ -367,13 +387,13 @@ ${RULINGS}
 
 以下文件**没有**注入，用 \`read\` 工具按需取用。路径清单：
 
-${listOf(ON_DEMAND, corpusDir)}
+${listOf(ON_DEMAND)}
 
 读取纪律：只读你这一轮真正需要的那一节。整套语料近 4000 行，全读一遍是纯粹的浪费（见 \`cache-economy.md\`）。`
 
   const map = `## 六、本会话已注入的语料索引
 
-下面 11 份文件**已全文注入到本条系统提示里**。不要再用 \`read\` 读它们，也不要把它们复制进产物。
+下面 12 份文件**已全文注入到本条系统提示里**。不要再用 \`read\` 读它们，也不要把它们复制进产物。
 
 | 语料 | 内容 | 字符数 | 指纹 |
 |---|---|---|---|
@@ -397,7 +417,7 @@ ${loaded.map((f) => `| \`${f.relPath}\` | ${f.purpose} | ${f.chars} | \`${f.hash
 
 ## 六、注入语料正文
 
-以下 11 份文件是本模式的全部工作规则。它们是硬约束，不是背景资料。
+以下 12 份文件是本模式的全部工作规则。它们是硬约束，不是背景资料。
 
 ${bodies}
 
@@ -437,13 +457,21 @@ ${footer}
  * resolution problem documented above.
  *
  * @param {import('@deepseek-ai/cordis').Context} ctx
- * @param {{ corpusDir?: string, maxChars?: number, liveReload?: boolean }} config
+ * @param {{ corpusDir?: string, maxChars?: number }} config
+ *
+ * NOTE: there is deliberately NO `liveReload` option. An earlier revision
+ * accepted one but never implemented it — it only printed a warning, so toggling
+ * it appeared to "enable hot reload" while the corpus was in fact read once at
+ * activation and never re-read. Documenting a no-op switch is worse than having
+ * none: it invites the exact behaviour (editing the corpus mid-session and
+ * expecting the prefix to update) that the cache contract forbids. Changing the
+ * corpus means restarting, full stop. Corpus changes must be logged in
+ * `cds/CHANGELOG.md` per `cache-economy.md` rule P4.
  */
 export function apply(ctx, config) {
   const resolved = {
     corpusDir: config?.corpusDir ?? DEFAULT_CORPUS,
-    maxChars: config?.maxChars ?? 200000,
-    liveReload: config?.liveReload ?? false
+    maxChars: config?.maxChars ?? 200000
   }
 
   const corpus = loadCorpus(resolved)
@@ -467,10 +495,4 @@ export function apply(ctx, config) {
       ctx.logger?.info?.('[cds-mode] 已卸载，系统提示前缀恢复为部署默认')
     }
   })
-
-  if (resolved.liveReload) {
-    ctx.logger?.warn?.(
-      '[cds-mode] liveReload 已开启：语料变化会改写系统提示前缀并使本会话提示词缓存失效。'
-    )
-  }
 }

@@ -1,11 +1,35 @@
 {
   "_comment": "CDS 模式状态机。由晨唯一维护。此文件是机器可读真相源，state.md 是它的人类可读快照。",
 
-  "cds_version": "1.0.0",
+  "cds_version": "1.6.0",
   "project": {
     "name": "",
     "code": "",
     "slug": ""
+  },
+
+  "budget": {
+    "_comment": "事前刹车。规模在 CALIBRATE 阶段定下，之后所有派发都要对账。见 workflow/01-new-project.md 阶段 0.5。",
+    "scale": null,
+    "_scale_values": ["极小", "小", "中", "大"],
+    "decided_by": "",
+    "rounds_cap": 0,
+    "question_cap": 0,
+    "personas_allowed": [],
+    "personas_used": [],
+    "wall_clock_estimate": "",
+    "per_task_timeout_hint": "",
+    "_per_task_comment": "单任务墙钟阈值（默认本轮预算墙钟的 1/2）。超时 → 标 partial、不等它，见 01-new-project.md 阶段 0.5「超时对账」。",
+    "batch_timeout_hint": "",
+    "_batch_comment": "整批墙钟阈值（默认本轮预算墙钟）。超时 → 先收已回来的，未回者标 partial。",
+    "timed_out_instances": [],
+    "_timed_out_comment": "本轮超时实例列表（task_id / 人格编号 / 缺口）。空数组表示无超时。",
+    "spent_rounds": 0,
+    "spent_questions": 0,
+    "overrun_reason": null,
+    "_overrun_comment": "超预算时必须写理由。null 表示未超。",
+    "upgraded_from": null,
+    "_upgraded_comment": "若中途升档（判小了），记原规模。升档须用户点头并写 decisions.md。"
   },
 
   "node": "INTAKE",
@@ -56,6 +80,26 @@
     "at": ""
   },
 
+  "questioning": {
+    "_comment": "提问判定表。见 questions/99-adaptive-asking.md 第三节。每收到一批回答就更新，跨会话恢复靠它。",
+    "project_type": null,
+    "_project_type_values": ["web", "app", "desktop", "cli", "plugin", "content", "api", "data", "game", "internal-tool"],
+    "level": null,
+    "scale": null,
+    "_scale_values": ["极小", "小", "中", "大"],
+    "commercial": null,
+    "_commercial_values": ["免费", "收费", "内部", "开源"],
+    "deployment": null,
+    "_deployment_values": ["本地单机", "内网", "公网"],
+    "region": null,
+    "_region_values": ["单地区", "全国", "跨国"],
+    "excluded": [],
+    "_excluded_comment": "已排除项：绝对不再问的东西。用户说『不需要登录』就把账号/权限/会话/密码重置整块划掉。这是最有价值的一栏。",
+    "to_clarify": [],
+    "_to_clarify_comment": "待澄清项：下一批必须问的东西。",
+    "at": ""
+  },
+
   "requirements": {
     "total": 0,
     "confirmed_by_user": false,
@@ -66,12 +110,17 @@
   },
 
   "gates": {
-    "_comment": "门禁通过状态。false 表示下游不得开工。",
+    "_comment": "门禁通过状态。false 表示下游不得开工。对应 CORE.md 第四节门禁表的 10 个节点。",
+    "kind_decided": false,
+    "calibration_done": false,
+    "requirements_confirmed": false,
+    "frozen_list_confirmed": false,
     "research_integrated": false,
     "design_closed_by_b4": false,
     "build_report_complete": false,
     "security_layer_done": false,
-    "bug_summary_complete": false
+    "bug_summary_complete": false,
+    "triage_plan_delivered": false
   },
 
   "bugs": {
@@ -82,6 +131,13 @@
     "S5": 0,
     "net_change_last_round": 0,
     "consecutive_non_increasing": 0,
+    "consecutive_no_new_s1s2": 0,
+    "_consecutive_no_new_s1s2_comment": "收敛只看这一条 + S1/S2 是否为 0。S3 及以下不计入收敛判定。见 CORE.md 第五节。",
+    "converged": false,
+    "s3_batch_pending": [],
+    "_s3_batch_comment": "攒批的 S3。≥3 条一起修，或用户要求时修。不阻断交付。",
+    "deferred_to_backlog": [],
+    "_deferred_comment": "S4/S5 不登记进台账，只写进交付报告的「可选改进」。此栏只记用户明确说「以后改」的项。",
     "history": []
   },
 

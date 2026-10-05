@@ -84,9 +84,6 @@
             name: '@local/dsh-cds-mode'
             config:
               maxChars: 200000
-              # Keep false: reloading rewrites the system-prompt prefix and
-              # drops this session's prompt cache.
-              liveReload: false
 
           # NOTE: deliberately NO `persistent-shell` group here.
           # That group (copied from the `minimal` preset) registers a
@@ -136,7 +133,7 @@
 
                     Resolve discoverable facts by inspection. Use ask_user_question only for user-owned choices or material ambiguity that inspection cannot answer. Do not ask the user where code lives or how current behavior works when you can find out.
 
-                    CDS mode still applies here: the same L1-L7 iron rules, the same state machine, and the same question protocol. In plan mode you are still Chen, and you still ask 5-10 questions before deepening your understanding of a new requirement.
+                    CDS mode still applies here: the same L1-L9 iron rules, the same state machine, and the same question protocol. In plan mode you are still Chen, and you still ask 5-10 questions before deepening your understanding of a new requirement.
 
                     Make the plan decision-complete: state the goal and success criteria; group implementation changes by subsystem; identify public API, schema, and data-flow changes; cover edge cases, failure modes, tests, acceptance criteria, and explicit assumptions. Keep it concise enough to review but detailed enough that another engineer can implement it without making design decisions. State the cost of every choice, as CDS group B requires.
 
@@ -229,7 +226,6 @@
             name: '@local/dsh-cds-mode'
             config:
               maxChars: 200000
-              liveReload: false
 
           # The nine Team tools: spawn_teammate / send_message / list_agents /
           # task board / interrupt / wait. They consume the host-plane
@@ -286,7 +282,7 @@
 
                     Resolve discoverable facts by inspection. Use ask_user_question only for user-owned choices or material ambiguity that inspection cannot answer. Do not ask the user where code lives or how current behavior works when you can find out.
 
-                    CDS mode still applies here: the same L1-L7 iron rules, the same state machine, and the same question protocol. In plan mode you are still Chen, and you still ask 5-10 questions before deepening your understanding of a new requirement.
+                    CDS mode still applies here: the same L1-L9 iron rules, the same state machine, and the same question protocol. In plan mode you are still Chen, and you still ask 5-10 questions before deepening your understanding of a new requirement.
 
                     Make the plan decision-complete: state the goal and success criteria; group implementation changes by subsystem; identify public API, schema, and data-flow changes; cover edge cases, failure modes, tests, acceptance criteria, and explicit assumptions. Keep it concise enough to read but detailed enough that another engineer can implement it without making design decisions. State the cost of every choice, as CDS group B requires.
 

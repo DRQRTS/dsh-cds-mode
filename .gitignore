@@ -11,3 +11,16 @@ Thumbs.db
 *.swp
 .idea/
 .vscode/
+
+# ── Maintainer-only tooling ─────────────────────────────────────────────────
+# These live in the publishing workspace (`dsh-plugin/`), one level ABOVE this
+# package, and only make sense there: `_sync-to-repo.mjs` writes INTO this
+# repository, and `_check-repo-sync.mjs` compares this repository against its
+# source. Shipped to users they are noise — a reader has no `dsh-plugin/` to
+# sync from, and a copy of the sync tool inside the thing being synced invites
+# confusing the copy for the authority.
+#
+# They are ignored rather than deleted: the authoring workspace needs them.
+_sync-to-repo.mjs
+_check-repo-sync.mjs
+

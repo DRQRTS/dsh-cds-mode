@@ -33,7 +33,7 @@ cds/
 │   ├── group-d-test.md          ← 测试组索引（D1–D6）
 │   ├── group-e-misc.md          ← 其他组索引（E1–E3 + 扩展位）
 │   ├── A1-官方派调查者.md        ← ↓ 21 份**独立委任书**
-│   ├── A2-复用派调查者.md          派发时按编号取一份，全文传给子 Agent
+│   ├── A2-复用派调查者.md          派发时按编号取一份，用 role_ref 装载role_load: static
 │   ├── …（A3/A4、B1–B4、C1–C4、D1–D6、E1–E3）
 │   └── E3-宣传片视频.md
 ├── workflow/
@@ -44,7 +44,8 @@ cds/
 ├── protocol/
 │   ├── peer-channel.md          ← 子 Agent 直连协同协议（不经晨传话）
 │   ├── artifacts.md             ← 文件产物契约（谁写、写哪、命名）
-│   └── bug-taxonomy.md          ← 五级分类法 + 类型分类法
+│   ├── bug-taxonomy.md          ← 五级分类法 + 类型分类法
+│   └── release-checklist.md     ← 放行清单：DONE 门禁七条硬勾选
 ├── questions/
 │   ├── 99-adaptive-asking.md    ← **提问总纲：生成式提问（先读这份）**
 │   ├── 00-calibration.md        ← 前 5 题：专业度校准（唯一固定题组）
@@ -52,20 +53,23 @@ cds/
 │   ├── 02-takeover-120.md       ← 接手项目题库（同上）
 │   └── 03-followup-10.md        ← 每次追加要求的追问素材
 └── selfrescue/
-    └── cache-economy.md         ← 自救模式·省钱部分：缓存命中率优化
+    ├── cache-economy.md         ← 自救模式·省钱部分：缓存命中率优化
+    └── evolution.md             ← 主动进化：按设备/项目/偏好做小幅微调
 ```
+
+> `selfrescue/evolution.md` **不在静态层**。它只按需读取，产物写入项目内 `.cds/evolution.md`，绝不进系统提示前缀（详见该文件第一节与 CORE 第十一节）。
 
 ---
 
 ## 1.5 两件最容易做错的事
 
-### 委任：人格卡必须**全文**交给子 Agent
+### 委任：人格卡必须**真正装载**给子 Agent
 
 子 Agent 继承父会话的预设，所以它默认拿到的系统提示和你一样（「你是晨 + 全部人格卡索引」）。
 **在那种上下文里它不会成为 A1**，只会"提到 A1"。
 
-派发时必须读 `personas/<编号>-<职能>.md` **全文**，作为子 Agent 的【角色定义】段落传入。
-**只给路径 = 委任失败。** 见 `CORE.md` 铁律 L8 与第六节。
+派发时用 `role_ref: personas/<编号>-<职能>.md` 指向人格卡并装载（`role_load: static`，即按该卡启动子 Agent 的角色定义）。
+**只给路径而不装载 = 委任失败。** 见 `CORE.md` 铁律 L8 与第六节。
 
 ### 提问：题库是**素材**，不是脚本
 
@@ -79,7 +83,7 @@ cds/
 
 ## 2. 人格总览
 
-> **每人一份委任书**，可单独交付给子 Agent。派发时按编号取文件全文传入。
+> **每人一份委任书**，可单独交付给子 Agent。派发时按编号用 `role_ref` 指向并装载（`role_load: static`）。
 
 | 编号 | 归属 | 一句话职责 | 组特质 |
 |---|---|---|---|
